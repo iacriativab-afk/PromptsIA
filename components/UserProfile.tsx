@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { User } from '../types';
-import { SparklesIcon, CheckBadgeIcon, CreditCardIcon, ArrowPathIcon, XIcon } from './Icons';
+import { SparklesIcon, CheckBadgeIcon, CreditCardIcon, ArrowPathIcon, XIcon, CodeBracketIcon } from './Icons';
 import { downgradeUserTier } from '../services/supabase';
 
 interface UserProfileProps {
@@ -28,19 +29,31 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
   const [otherReason, setOtherReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
 
+  // Admin API Key State
+  const [adminKey, setAdminKey] = useState('');
+  const [showAdminSettings, setShowAdminSettings] = useState(false);
+
+  useEffect(() => {
+    const storedKey = localStorage.getItem('PROMPTSIA_API_KEY');
+    if (storedKey) setAdminKey(storedKey);
+  }, []);
+
+  const handleSaveKey = () => {
+    if (adminKey.trim().startsWith('AIza')) {
+        localStorage.setItem('PROMPTSIA_API_KEY', adminKey.trim());
+        alert('Chave Mestra salva! O SaaS agora consumirá seus créditos para gerar respostas.');
+    } else {
+        alert('Chave inválida. Deve começar com "AIza".');
+    }
+  };
+
   const handleStripeCheckout = async () => {
     setIsValidating(true);
     
-    // NOTA DE SEGURANÇA:
-    // A chave sk_test_... fornecida nunca deve ser usada no frontend.
-    // Em um cenário real, chamaríamos um endpoint do backend que usaria essa chave para criar uma Checkout Session.
-    // Aqui estamos simulando o sucesso do pagamento.
-
     setTimeout(() => {
         setIsValidating(false);
         setShowPaymentSuccess(true);
         
-        // Efetiva o upgrade após mostrar o sucesso
         setTimeout(() => {
             onUpgrade();
             setShowPaymentSuccess(false);
@@ -60,7 +73,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
             const feedback = selectedReason === "Outro motivo" ? otherReason : selectedReason;
             await downgradeUserTier(user.id, feedback);
             
-            // Close modal and reset state
             setShowCancelModal(false);
             setSelectedReason('');
             setOtherReason('');
@@ -112,7 +124,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
 
           {/* Subscription Status */}
           {user.tier === 'free' ? (
-              <div className="bg-gradient-to-r from-[#635BFF]/10 to-brand-accent/10 border border-[#635BFF]/30 rounded-2xl p-8 relative overflow-hidden">
+              <div className="bg-gradient-to-r from-[#635BFF]/10 to-brand-accent/10 border border-[#635BFF]/30 rounded-2xl p-8 relative overflow-hidden mb-8">
                  <div className="relative z-10">
                     <h3 className="text-xl font-bold text-white mb-2">Desbloqueie o Poder Total 🚀</h3>
                     <p className="text-brand-text-secondary max-w-lg mb-6">
@@ -120,7 +132,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
                     </p>
                     
                     <div className="flex flex-col sm:flex-row gap-4">
-                        {/* Botão Simulado do Stripe */}
                         <button 
                             onClick={handleStripeCheckout}
                             disabled={isValidating || showPaymentSuccess}
@@ -150,18 +161,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
                             )}
                         </button>
                     </div>
-
-                    <p className="text-xs text-brand-text-secondary mt-4 opacity-70 flex items-center gap-1">
-                        <CreditCardIcon className="h-3 w-3" />
-                        Pagamento seguro via Stripe (Modo Teste Ativo)
-                    </p>
                  </div>
-                 
-                 {/* Background Decorations */}
                  <SparklesIcon className="absolute top-4 right-4 w-32 h-32 text-[#635BFF] opacity-10 rotate-12" />
               </div>
           ) : (
-              <div className="bg-green-900/20 border border-green-500/30 rounded-2xl p-8 relative overflow-hidden">
+              <div className="bg-green-900/20 border border-green-500/30 rounded-2xl p-8 relative overflow-hidden mb-8">
                   <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="p-2 rounded-full bg-green-500/20">
@@ -183,6 +187,46 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
                   </div>
               </div>
           )}
+
+          {/* SaaS Admin Settings */}
+          <div className="border-t border-white/10 pt-8">
+            <button 
+                onClick={() => setShowAdminSettings(!showAdminSettings)}
+                className="flex items-center gap-2 text-brand-text-secondary hover:text-white transition-colors text-sm mb-4"
+            >
+                <CodeBracketIcon className="h-4 w-4" />
+                {showAdminSettings ? 'Ocultar Configurações Admin' : 'Configurações do SaaS (Admin)'}
+            </button>
+
+            {showAdminSettings && (
+                <div className="bg-black/30 border border-brand-accent/30 rounded-xl p-6 animate-fade-in">
+                    <h3 className="font-bold text-white mb-2 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                        Chave Mestra da API (Google Gemini)
+                    </h3>
+                    <p className="text-sm text-brand-text-secondary mb-4">
+                        Como dono do SaaS, insira sua chave da Google aqui. Todos os usuários da plataforma usarão esta chave para gerar conteúdo (simulando o backend).
+                        <br />
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-brand-accent hover:underline">Obter chave no Google AI Studio &rarr;</a>
+                    </p>
+                    <div className="flex gap-2">
+                        <input 
+                            type="password" 
+                            value={adminKey}
+                            onChange={(e) => setAdminKey(e.target.value)}
+                            placeholder="Cole sua chave AIza... aqui"
+                            className="flex-1 bg-brand-primary border border-white/10 rounded-lg px-4 py-2 text-white focus:border-brand-accent focus:outline-none font-mono text-sm"
+                        />
+                        <button 
+                            onClick={handleSaveKey}
+                            className="bg-brand-accent hover:bg-brand-accent-hover text-white px-6 py-2 rounded-lg font-bold transition-colors text-sm"
+                        >
+                            Salvar e Ativar
+                        </button>
+                    </div>
+                </div>
+            )}
+          </div>
        </div>
 
        {/* Cancellation Modal */}
@@ -190,7 +234,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
             <div className="bg-brand-surface border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative">
                 
-                {/* Header */}
                 <div className="p-6 border-b border-white/10 flex justify-between items-center">
                     <h3 className="text-lg font-bold text-white">Cancelar Assinatura</h3>
                     <button 
@@ -201,7 +244,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
                     </button>
                 </div>
 
-                {/* Content */}
                 <div className="p-6">
                     <p className="text-brand-text-secondary text-sm mb-4">
                         Sentiremos sua falta! Para nos ajudar a melhorar, poderia nos dizer por que você está cancelando?

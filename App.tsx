@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -6,6 +7,7 @@ import PromptLibrary from './components/PromptLibrary';
 import Courses from './components/Courses';
 import LandingPage from './components/LandingPage';
 import UserProfile from './components/UserProfile';
+import ProtectedRoute from './components/ProtectedRoute'; // Novo componente
 import type { Agent, User } from './types';
 import { MenuIcon, XIcon } from './components/Icons';
 
@@ -25,9 +27,26 @@ const App: React.FC = () => {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Realtime Auth Listener
+  // Realtime Auth Listener with Safety Timeout
   useEffect(() => {
+    let mounted = true;
+
+    // TASK 1: Safety Timeout
+    // Se o Supabase não responder em 4 segundos (ex: erro de rede, chave inválida),
+    // forçamos o estado de carregamento para falso para mostrar a Landing Page.
+    const safetyTimer = setTimeout(() => {
+        if (mounted && loadingAuth) {
+            console.warn("⏳ Auth check timed out. Forçando exibição da Landing Page.");
+            setLoadingAuth(false);
+        }
+    }, 4000);
+
     const unsubscribe = subscribeToAuthChanges((authUser) => {
+        if (!mounted) return;
+        
+        // Se recebermos resposta, limpamos o timeout de segurança
+        clearTimeout(safetyTimer); 
+
         if (authUser) {
             setUser(authUser);
             setIsLoggedIn(true);
@@ -38,25 +57,28 @@ const App: React.FC = () => {
         setLoadingAuth(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+        mounted = false;
+        clearTimeout(safetyTimer);
+        unsubscribe();
+    };
   }, []);
 
   const handleLogin = async () => {
     try {
+      // O loading state visual é controlado dentro da LandingPage
       await signInWithGoogle();
     } catch (error: any) {
       console.error("Login failed", error);
-      alert(`Falha ao fazer login: ${error.message || 'Tente novamente.'}`);
+      // O alerta já é mostrado dentro do serviço
     }
   };
 
   const handleGuestLogin = async () => {
       try {
-          setLoadingAuth(true);
           await loginAsGuest();
       } catch (error) {
           console.error("Guest login failed", error);
-          setLoadingAuth(false);
       }
   };
 
@@ -70,7 +92,6 @@ const App: React.FC = () => {
       if (user) {
           await upgradeUserTier(user.id);
           setUser({ ...user, tier: 'pro' });
-          // Feedback visual é tratado no UserProfile
       }
   };
 
@@ -79,7 +100,7 @@ const App: React.FC = () => {
 
     // Access Control Logic
     if (agent.requiresPro && user.tier === 'free') {
-        if (confirm("Este agente é exclusivo para usuários PRO. Deseja ver seu perfil para atualizar?")) {
+        if (confirm("💎 Este agente é exclusivo para usuários PRO. Deseja ver seu perfil para atualizar?")) {
             setCurrentView('profile');
         }
         return;
@@ -107,7 +128,7 @@ const App: React.FC = () => {
           <div className="flex h-screen w-full items-center justify-center bg-brand-primary text-white">
               <div className="animate-pulse flex flex-col items-center">
                   <div className="h-8 w-8 bg-brand-accent rounded-full mb-4 shadow-[0_0_15px_rgba(99,102,241,0.5)]"></div>
-                  <p className="text-sm font-mono text-brand-text-secondary">Carregando PromptsIA...</p>
+                  <p className="text-sm font-mono text-brand-text-secondary">Conectando ao PromptsIA...</p>
               </div>
           </div>
       );
@@ -157,11 +178,15 @@ const App: React.FC = () => {
         )}
 
         {currentView === 'library' && (
-          <PromptLibrary />
+          <ProtectedRoute user={user}>
+             <PromptLibrary />
+          </ProtectedRoute>
         )}
 
         {currentView === 'courses' && (
-          <Courses />
+          <ProtectedRoute user={user}>
+            <Courses />
+          </ProtectedRoute>
         )}
 
         {currentView === 'profile' && (

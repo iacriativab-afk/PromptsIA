@@ -67,6 +67,20 @@ function createWavDataUri(base64Pcm: string, sampleRate = 24000): string {
     return URL.createObjectURL(blob);
 }
 
+// Retrieves API Key from Admin Settings (LocalStorage) or Environment
+const getApiKey = () => {
+    // 1. Priority: Admin Key set in UserProfile
+    const storedKey = localStorage.getItem('PROMPTSIA_API_KEY');
+    if (storedKey) return storedKey;
+
+    // 2. Fallback: Environment Variable (if configured in Vite/Build)
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+        return process.env.API_KEY;
+    }
+
+    return null;
+};
+
 // Main generation function
 export const runAgentGeneration = async (
     agent: Agent, 
@@ -75,8 +89,19 @@ export const runAgentGeneration = async (
     additionalParams: { aspectRatio?: string } = {}
 ): Promise<{ type: string; data: string }> => {
   
-  // Create a new instance for each call to ensure the latest API key is used
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = getApiKey();
+
+  // Exception: If no key is set, but user is trying Veo, we might use the popup flow (managed by window.aistudio)
+  // However, for other agents, we MUST have a key.
+  if (!apiKey && agent.type !== 'video') {
+      return { 
+          type: 'error', 
+          data: '⚠️ Configuração de SaaS Necessária: Nenhuma chave de API encontrada. Vá em "Meu Perfil" > "Configurações do SaaS" e insira sua Google API Key para ativar a plataforma.' 
+      };
+  }
+
+  // Initialize AI with the retrieved key (or empty if relying on Veo popups only)
+  const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
   try {
     // Determine model: Use specific agent model if defined, else default based on type
@@ -153,10 +178,13 @@ export const runAgentGeneration = async (
     // VIDEO GENERATION
     if (agent.type === 'video') {
         setLoadingMessage('Verificando chave de API...');
-        // Per guidelines, Veo requires user-selected API key
-        if (!(await window.aistudio.hasSelectedApiKey())) {
-            await window.aistudio.openSelectKey();
+        
+        // For Veo, we prefer the specific key selection flow if available/required
+        // But if Admin Key is present, we can try to use it directly via SDK
+        if (!apiKey && !(await window.aistudio.hasSelectedApiKey())) {
+             await window.aistudio.openSelectKey();
         }
+        
         setLoadingMessage('Renderizando vídeo com Veo (isso pode levar 1-2 minutos)...');
         
         let operation = await ai.models.generateVideos({
@@ -182,7 +210,9 @@ export const runAgentGeneration = async (
         if (!downloadLink) throw new Error("URI de download do vídeo não encontrado.");
         
         // The response.body contains the MP4 bytes. Append API key.
-        const videoResponse = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+        // Use the key we have: either local admin key or process env
+        const keyToUse = apiKey || process.env.API_KEY; 
+        const videoResponse = await fetch(`${downloadLink}&key=${keyToUse}`);
         if (!videoResponse.ok) throw new Error("Falha ao fazer download do vídeo.");
 
         const videoBlob = await videoResponse.blob();
@@ -198,6 +228,6 @@ export const runAgentGeneration = async (
     if (agent.type === 'video' && error.message?.includes('Requested entity was not found')) {
       return { type: 'error', data: `Erro de Autenticação: A chave de API selecionada pode ser inválida para o modelo Veo. Tente novamente selecionando uma nova chave.`};
     }
-    return { type: 'error', data: `Ocorreu um erro no processamento: ${error.message}.`};
+    return { type: 'error', data: `Ocorreu um erro no processamento: ${error.message}. (Verifique se a API Key no Perfil > Admin está correta)`};
   }
 };

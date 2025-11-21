@@ -1,12 +1,39 @@
+
 import React, { useState } from 'react';
-import { SparklesIcon, CheckBadgeIcon, UserGroupIcon } from './Icons';
+import { SparklesIcon, CheckBadgeIcon, UserGroupIcon, ArrowPathIcon } from './Icons';
 
 interface LandingPageProps {
-  onLogin: () => void;
-  onGuestLogin: () => void;
+  onLogin: () => Promise<void> | void;
+  onGuestLogin: () => Promise<void> | void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onGuestLogin }) => {
+  // Estado local para controlar o feedback visual de carregamento
+  const [isLoading, setIsLoading] = useState<'google' | 'guest' | null>(null);
+
+  const handleGoogleLogin = async () => {
+    if (isLoading) return;
+    setIsLoading('google');
+    try {
+      await onLogin();
+      // Se o login for redirecionado, o estado persiste até o reload.
+    } catch (e) {
+      console.error(e);
+      setIsLoading(null); // Reseta apenas em erro
+    }
+  };
+
+  const handleGuestClick = async () => {
+    if (isLoading) return;
+    setIsLoading('guest');
+    try {
+      await onGuestLogin();
+    } catch (e) {
+      console.error(e);
+      setIsLoading(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-brand-primary text-white font-sans overflow-y-auto">
       {/* Navbar */}
@@ -19,15 +46,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onGuestLogin }) => {
         </div>
         <div className="flex gap-3">
             <button 
-            onClick={onGuestLogin}
-            className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors text-xs font-medium border border-white/10 text-brand-text-secondary hover:text-white"
+            onClick={handleGuestClick}
+            disabled={!!isLoading}
+            className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors text-xs font-medium border border-white/10 text-brand-text-secondary hover:text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
+            {isLoading === 'guest' && <ArrowPathIcon className="h-3 w-3 animate-spin" />}
             Visitante
             </button>
             <button 
-            onClick={onLogin}
-            className="px-5 py-2 rounded-full bg-brand-accent hover:bg-brand-accent-hover transition-colors text-sm font-bold"
+            onClick={handleGoogleLogin}
+            disabled={!!isLoading}
+            className="px-5 py-2 rounded-full bg-brand-accent hover:bg-brand-accent-hover transition-colors text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
+            {isLoading === 'google' && <ArrowPathIcon className="h-3 w-3 animate-spin" />}
             Entrar
             </button>
         </div>
@@ -54,18 +85,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onGuestLogin }) => {
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button 
-              onClick={onLogin}
-              className="bg-brand-accent hover:bg-brand-accent-hover text-white px-8 py-4 rounded-xl font-bold transition-all hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] flex items-center justify-center gap-3 text-lg"
+              onClick={handleGoogleLogin}
+              disabled={!!isLoading}
+              className="bg-brand-accent hover:bg-brand-accent-hover text-white px-8 py-4 rounded-xl font-bold transition-all hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] flex items-center justify-center gap-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed min-w-[220px]"
             >
-               <SparklesIcon className="h-5 w-5" />
-               Entrar com Google
+               {isLoading === 'google' ? <ArrowPathIcon className="h-5 w-5 animate-spin" /> : <SparklesIcon className="h-5 w-5" />}
+               {isLoading === 'google' ? 'Conectando...' : 'Entrar com Google'}
             </button>
             <button 
-              onClick={onGuestLogin}
-              className="bg-brand-surface hover:bg-white/10 text-white border border-white/10 px-8 py-4 rounded-xl font-medium transition-all flex items-center justify-center gap-3 text-lg"
+              onClick={handleGuestClick}
+              disabled={!!isLoading}
+              className="bg-brand-surface hover:bg-white/10 text-white border border-white/10 px-8 py-4 rounded-xl font-medium transition-all flex items-center justify-center gap-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed min-w-[220px]"
             >
-               <UserGroupIcon className="h-5 w-5" />
-               Acesso Visitante
+               {isLoading === 'guest' ? <ArrowPathIcon className="h-5 w-5 animate-spin" /> : <UserGroupIcon className="h-5 w-5" />}
+               {isLoading === 'guest' ? 'Acessando...' : 'Acesso Visitante'}
             </button>
         </div>
         <p className="mt-4 text-xs text-brand-text-secondary opacity-60">
@@ -114,7 +147,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onGuestLogin }) => {
                  ))}
                </ul>
                
-               <button onClick={onGuestLogin} className="w-full py-3 rounded-xl border border-white/20 hover:bg-white/5 transition-colors font-bold">
+               <button onClick={handleGuestClick} disabled={!!isLoading} className="w-full py-3 rounded-xl border border-white/20 hover:bg-white/5 transition-colors font-bold disabled:opacity-50 flex items-center justify-center gap-2">
+                  {isLoading === 'guest' ? <ArrowPathIcon className="h-4 w-4 animate-spin" /> : null}
                   Testar Grátis (Visitante)
                </button>
             </div>
@@ -134,7 +168,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onGuestLogin }) => {
                  ))}
                </ul>
                
-               <button onClick={onLogin} className="w-full py-3 rounded-xl bg-brand-accent hover:bg-brand-accent-hover transition-colors font-bold text-white shadow-lg shadow-brand-accent/25">
+               <button onClick={handleGoogleLogin} disabled={!!isLoading} className="w-full py-3 rounded-xl bg-brand-accent hover:bg-brand-accent-hover transition-colors font-bold text-white shadow-lg shadow-brand-accent/25 disabled:opacity-50 flex items-center justify-center gap-2">
+                  {isLoading === 'google' ? <ArrowPathIcon className="h-4 w-4 animate-spin" /> : null}
                   Fazer Login e Assinar
                </button>
             </div>
