@@ -3,6 +3,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './components/LandingPage';
 import Dashboard from './pages/Dashboard';
+import TermsOfService from './components/TermsOfService';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './AuthContext';
 
@@ -16,6 +17,9 @@ function App() {
         path="/" 
         element={user ? <Navigate to="/dashboard" replace /> : <LandingPage />} 
       />
+
+      {/* Rota pública: Termos de Uso */}
+      <Route path="/termos" element={<TermsOfService />} />
 
       {/* Rotas Protegidas */}
       <Route element={<ProtectedRoute />}>

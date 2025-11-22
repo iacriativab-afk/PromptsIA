@@ -1,5 +1,4 @@
 import React from 'react';
-import { ChevronDownIcon } from './Icons';
 
 const TermsOfService: React.FC = () => {
   const [expandedSections, setExpandedSections] = React.useState<Set<string>>(new Set());
@@ -374,11 +373,18 @@ Levaremos suas preocupações a sério! 🤝`
                 <h2 className="text-lg font-bold text-white group-hover:text-brand-accent transition-colors">
                   {section.title}
                 </h2>
-                <ChevronDownIcon 
+                <svg 
                   className={`h-5 w-5 text-brand-accent transition-transform duration-300 ${
                     expandedSections.has(section.id) ? 'rotate-180' : ''
                   }`}
-                />
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
               </button>
 
               {expandedSections.has(section.id) && (
