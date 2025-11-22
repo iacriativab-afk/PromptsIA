@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { Agent } from '../types';
 
 // Helper to encode Uint8Array to Base64
