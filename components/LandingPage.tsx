@@ -93,7 +93,7 @@ const LandingPage: React.FC = () => {
               className="bg-brand-surface hover:bg-white/10 text-white border border-white/10 px-8 py-4 rounded-xl font-medium transition-all flex items-center justify-center gap-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed min-w-[220px]"
             >
                {isLoading === 'guest' ? <ArrowPathIcon className="h-5 w-5 animate-spin" /> : <UserGroupIcon className="h-5 w-5" />}
-               {isLoading === 'guest' ? 'Acesso Visitante'}
+               {isLoading === 'guest' ? 'Carregando...' : 'Acesso Visitante'}
             </button>
         </div>
         <p className="mt-4 text-xs text-brand-text-secondary opacity-60">
