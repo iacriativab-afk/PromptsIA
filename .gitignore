@@ -12,18 +12,6 @@ dist
 dist-ssr
 *.local
 
-# Variáveis de ambiente (NUNCA commitar)
-.env
-.env.local
-.env.*.local
-.env.production.local
-.env.development.local
-
-# Chaves e certificados
-*.pem
-*.key
-*.crt
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -34,29 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-# IDE específicas
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Cache
-.cache/
-.parcel-cache
-.eslintcache
-
-# TypeScript
-*.tsbuildinfo
-tsconfig.tsbuildinfo
-*.d.ts
-
-# Testes
-coverage/
-.nyc_output/
-.mocha.opts
-
-# Vite
-.vite/
-vite_ssr_bundle.js

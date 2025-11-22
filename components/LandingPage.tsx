@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { SparklesIcon, CheckBadgeIcon, UserGroupIcon, ArrowPathIcon } from './Icons';
+import { SparklesIcon, CheckBadgeIcon, UserGroupIcon, ArrowPathIcon, StarIcon, ClockIcon, SwatchIcon } from './Icons';
 import { useAuth } from '../AuthContext';
 
 const LandingPage: React.FC = () => {
@@ -37,7 +37,7 @@ const LandingPage: React.FC = () => {
            <div className="w-8 h-8 rounded-lg bg-brand-accent flex items-center justify-center">
              <SparklesIcon className="h-5 w-5 text-white" />
            </div>
-           <span className="text-xl font-bold tracking-tight">PromptsIA</span>
+           <span className="text-xl font-bold tracking-tight">Prompts.IA</span>
         </div>
         <div className="flex gap-3">
             <button 
@@ -46,7 +46,7 @@ const LandingPage: React.FC = () => {
             className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors text-xs font-medium border border-white/10 text-brand-text-secondary hover:text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
             {isLoading === 'guest' && <ArrowPathIcon className="h-3 w-3 animate-spin" />}
-            Visitante
+            Explorar
             </button>
             <button 
             onClick={onGoogleLogin}
@@ -65,16 +65,16 @@ const LandingPage: React.FC = () => {
         
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-accent/10 border border-brand-accent/20 mb-6 backdrop-blur-sm animate-fade-in-up">
             <span className="flex h-2 w-2 rounded-full bg-brand-accent"></span>
-            <span className="text-xs font-bold text-brand-accent uppercase tracking-widest">Nova Era da Inteligência</span>
+            <span className="text-xs font-bold text-brand-accent uppercase tracking-widest">Biblioteca 2.0</span>
         </div>
 
-        <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight max-w-4xl mx-auto leading-tight">
-           Domine a IA Generativa <br />
-           <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-accent to-purple-400">Sem Precisar Programar</span>
+        <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight max-w-5xl mx-auto leading-tight">
+           Resultados Extraordinários com <br />
+           <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-accent to-purple-400">Prompts de Elite</span>
         </h1>
         
-        <p className="text-xl text-brand-text-secondary max-w-2xl mx-auto mb-10 leading-relaxed">
-          Acesse agentes especializados, cursos práticos e ferramentas de criação (Texto, Vídeo, Imagem) em uma única plataforma unificada com a <strong>PromptsIA</strong>.
+        <p className="text-xl text-brand-text-secondary max-w-3xl mx-auto mb-10 leading-relaxed">
+          Sua biblioteca definitiva de comandos. Acesse prompts validados para <strong>Gemini, ChatGPT e Midjourney</strong> e transforme inputs simples em entregas de nível expert.
         </p>
 
         {/* CTA Buttons */}
@@ -85,7 +85,7 @@ const LandingPage: React.FC = () => {
               className="bg-brand-accent hover:bg-brand-accent-hover text-white px-8 py-4 rounded-xl font-bold transition-all hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] flex items-center justify-center gap-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed min-w-[220px]"
             >
                {isLoading === 'google' ? <ArrowPathIcon className="h-5 w-5 animate-spin" /> : <SparklesIcon className="h-5 w-5" />}
-               {isLoading === 'google' ? 'Conectando...' : 'Entrar com Google'}
+               {isLoading === 'google' ? 'Conectando...' : 'Acessar Biblioteca Agora'}
             </button>
             <button 
               onClick={onGuestClick}
@@ -93,27 +93,39 @@ const LandingPage: React.FC = () => {
               className="bg-brand-surface hover:bg-white/10 text-white border border-white/10 px-8 py-4 rounded-xl font-medium transition-all flex items-center justify-center gap-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed min-w-[220px]"
             >
                {isLoading === 'guest' ? <ArrowPathIcon className="h-5 w-5 animate-spin" /> : <UserGroupIcon className="h-5 w-5" />}
-               {isLoading === 'guest' ? 'Carregando...' : 'Acesso Visitante'}
+               {isLoading === 'guest' ? 'Acesso Visitante' : 'Explorar Sem Compromisso'}
             </button>
         </div>
         <p className="mt-4 text-xs text-brand-text-secondary opacity-60">
-            Não é necessário cartão de crédito para o modo visitante.
+            Junte-se a mais de 10.000 criadores e profissionais.
         </p>
       </section>
 
-      {/* Features Grid */}
+      {/* Features Grid (Benefits) */}
       <section className="py-20 bg-brand-secondary/30 border-y border-white/5">
         <div className="max-w-7xl mx-auto px-6">
            <div className="grid md:grid-cols-3 gap-8">
               {[
-                { title: 'Agentes Especializados', desc: 'Assistentes de IA pré-treinados para Marketing, Dev, e Design.', icon: '🤖' },
-                { title: 'Geração Multimodal', desc: 'Crie imagens (Imagen 4), Vídeos (Veo) e Áudio em segundos.', icon: '🎨' },
-                { title: 'Cursos Práticos', desc: 'Aprenda engenharia de prompt e automação com nossos módulos.', icon: '📚' }
+                { 
+                  title: 'Resultados de Nível Profissional', 
+                  desc: 'Prompts engenheirados por especialistas para extrair a máxima qualidade e precisão dos modelos de IA.', 
+                  icon: <StarIcon className="h-8 w-8 text-brand-accent" />
+                },
+                { 
+                  title: 'Economia de Tempo Real', 
+                  desc: 'Pule a curva de aprendizado e a tentativa e erro. Copie estratégias validadas e obtenha resultados em segundos.', 
+                  icon: <ClockIcon className="h-8 w-8 text-brand-accent" /> 
+                },
+                { 
+                  title: 'Versatilidade Total', 
+                  desc: 'Uma suíte completa para todas as suas ferramentas: Texto, Código, Imagem (Imagen 4) e Vídeo (Veo).', 
+                  icon: <SwatchIcon className="h-8 w-8 text-brand-accent" /> 
+                }
               ].map((feat, i) => (
-                <div key={i} className="p-8 rounded-2xl bg-brand-surface border border-white/5 hover:border-brand-accent/30 transition-colors">
-                   <div className="text-4xl mb-4">{feat.icon}</div>
-                   <h3 className="text-xl font-bold mb-2">{feat.title}</h3>
-                   <p className="text-brand-text-secondary">{feat.desc}</p>
+                <div key={i} className="p-8 rounded-2xl bg-brand-surface border border-white/5 hover:border-brand-accent/30 transition-colors group">
+                   <div className="mb-6 p-3 bg-brand-accent/10 w-fit rounded-xl border border-brand-accent/20 group-hover:scale-110 transition-transform duration-300">{feat.icon}</div>
+                   <h3 className="text-xl font-bold mb-3 text-white">{feat.title}</h3>
+                   <p className="text-brand-text-secondary leading-relaxed">{feat.desc}</p>
                 </div>
               ))}
            </div>
@@ -124,7 +136,7 @@ const LandingPage: React.FC = () => {
       <section className="py-24 px-6 max-w-7xl mx-auto">
          <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Planos Simples e Transparentes</h2>
-            <p className="text-brand-text-secondary">Comece pequeno e escale seus superpoderes com a PromptsIA.</p>
+            <p className="text-brand-text-secondary">Comece com o essencial e escale seus superpoderes.</p>
          </div>
 
          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -132,10 +144,10 @@ const LandingPage: React.FC = () => {
             <div className="p-8 rounded-3xl bg-brand-surface border border-white/10 flex flex-col">
                <h3 className="text-xl font-bold text-white">Iniciante</h3>
                <div className="my-4"><span className="text-4xl font-bold">R$ 0</span><span className="text-brand-text-secondary">/mês</span></div>
-               <p className="text-brand-text-secondary text-sm mb-8">Para quem está descobrindo o poder da IA.</p>
+               <p className="text-brand-text-secondary text-sm mb-8">Para explorar a biblioteca básica.</p>
                
                <ul className="space-y-3 mb-8 flex-1">
-                 {['Acesso a Agentes de Texto (Flash)', '5 Gerações de Imagem/dia', 'Biblioteca de Prompts Básica', '1 Curso Introdutório'].map(item => (
+                 {['Acesso à Biblioteca Pública', 'Agentes de Texto Básicos', '5 Gerações de Imagem/dia', 'Comunidade de Suporte'].map(item => (
                    <li key={item} className="flex items-center gap-3 text-sm text-gray-300">
                      <CheckBadgeIcon className="h-5 w-5 text-gray-500" /> {item}
                    </li>
@@ -153,10 +165,10 @@ const LandingPage: React.FC = () => {
                <div className="absolute top-0 right-0 bg-brand-accent text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl">POPULAR</div>
                <h3 className="text-xl font-bold text-white">Pro Master</h3>
                <div className="my-4"><span className="text-4xl font-bold">R$ 29,90</span><span className="text-brand-text-secondary">/mês</span></div>
-               <p className="text-brand-text-secondary text-sm mb-8">Poder total para criadores e profissionais.</p>
+               <p className="text-brand-text-secondary text-sm mb-8">Poder total para criadores sérios.</p>
                
                <ul className="space-y-3 mb-8 flex-1">
-                 {['Agentes Avançados (Gemini 3 Pro)', 'Geração de Vídeo (Veo 3.1)', 'Imagens Ilimitadas (Imagen 4)', 'Deep Reasoning (32k tokens)', 'Todos os Cursos', 'Suporte Prioritário'].map(item => (
+                 {['Biblioteca Completa de Prompts', 'Agentes Avançados (Gemini 3 Pro)', 'Geração de Vídeo (Veo 3.1)', 'Deep Reasoning (32k tokens)', 'Imagens Ilimitadas (Imagen 4)', 'Suporte Prioritário'].map(item => (
                    <li key={item} className="flex items-center gap-3 text-sm text-white">
                      <CheckBadgeIcon className="h-5 w-5 text-brand-accent" /> {item}
                    </li>
@@ -173,7 +185,7 @@ const LandingPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="py-10 border-t border-white/5 text-center text-brand-text-secondary text-sm">
-        <p>&copy; 2024 PromptsIA. Todos os direitos reservados.</p>
+        <p>&copy; 2024 Prompts.IA. Todos os direitos reservados.</p>
       </footer>
     </div>
   );

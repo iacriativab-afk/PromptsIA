@@ -1,3 +1,4 @@
+
 import type { Agent, Prompt, Course } from './types';
 import { AcademicCapIcon, BookOpenIcon, MegaphoneIcon, FilmIcon, Bars3BottomLeftIcon, PencilSquareIcon, LanguageIcon, PhotoIcon, SpeakerWaveIcon, VideoCameraIcon, CodeBracketIcon, LightBulbIcon, CreditCardIcon, SparklesIcon, ScissorsIcon } from './components/Icons';
 
@@ -321,6 +322,15 @@ export const PROMPTS: Prompt[] = [
     tags: ['Veo', 'Cinematic', 'Video'],
     content: 'Drone shot cinematográfico, 4k, sobrevoando um fiorde norueguês ao amanhecer. A água está calma e reflete as montanhas nevadas. Iluminação suave e dourada.',
     requiresPro: true
+  },
+  {
+    id: 'p9',
+    title: 'Sequência de Lançamento Instagram (5 Posts)',
+    category: 'Marketing',
+    outputType: 'text',
+    persona: 'Social Media Strategist',
+    tags: ['Instagram', 'Lançamento', 'Copywriting', 'Vendas'],
+    content: 'Atue como um Estrategista de Social Media Sênior. Seu objetivo é criar uma sequência de 5 posts para o Instagram para promover [PRODUTO/SERVIÇO].\n\nPara cada post, defina:\n1. **Formato** (Reels, Carrossel, Estático).\n2. **Headline** (Gancho visual/texto na imagem).\n3. **Legenda** (Copywriting usando framework AIDA).\n4. **Sugestão Visual** (Descrição da imagem/vídeo).\n\nA sequência deve seguir esta lógica de funil:\n- **Post 1:** Consciência do Problema (Topo de Funil).\n- **Post 2:** Agitação do Problema (Meio de Funil).\n- **Post 3:** Apresentação da Solução ([PRODUTO/SERVIÇO]).\n- **Post 4:** Prova Social/Autoridade.\n- **Post 5:** Quebra de Objeção + Chamada para Ação (Venda).\n\nO tom de voz deve ser [TOM DE VOZ].'
   }
 ];
 

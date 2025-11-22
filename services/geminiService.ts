@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI, Modality } from "@google/genai";
 import type { Agent } from '../types';
 
 // Helper to encode Uint8Array to Base64
@@ -66,45 +66,6 @@ function createWavDataUri(base64Pcm: string, sampleRate = 24000): string {
     return URL.createObjectURL(blob);
 }
 
-// Retrieves API Key from Admin Settings (LocalStorage) or Environment
-// COM VALIDAÇÃO E SANITIZAÇÃO
-const getApiKey = (): string | null => {
-    // 1. Priority: Admin Key set in UserProfile
-    try {
-        const storedKey = localStorage.getItem('PROMPTSIA_API_KEY');
-        // Validar formato básico (não deve estar vazio, deve ser string)
-        if (storedKey && typeof storedKey === 'string' && storedKey.length > 10) {
-            return storedKey.trim();
-        }
-    } catch (e) { 
-        console.warn('Erro ao acessar localStorage para API_KEY');
-    }
-
-    // 2. Fallback: import.meta.env (Vite - recomendado)
-    try {
-        const viteKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_API_KEY;
-        if (viteKey && typeof viteKey === 'string' && viteKey.length > 10) {
-            return viteKey.trim();
-        }
-    } catch (e) { 
-        console.warn('Erro ao acessar import.meta.env para API_KEY');
-    }
-
-    // 3. Última tentativa: process.env (Node - menos provável em browser)
-    try {
-        if (typeof process !== 'undefined' && process.env) {
-            const processKey = process.env.VITE_API_KEY || process.env.API_KEY;
-            if (processKey && typeof processKey === 'string' && processKey.length > 10) {
-                return processKey.trim();
-            }
-        }
-    } catch (e) { 
-        // Ignorar erros
-    }
-
-    return null;
-};
-
 // Main generation function
 export const runAgentGeneration = async (
     agent: Agent, 
@@ -113,87 +74,169 @@ export const runAgentGeneration = async (
     additionalParams: { aspectRatio?: string } = {}
 ): Promise<{ type: string; data: string }> => {
   
-  const apiKey = getApiKey();
-
-  // Exception: If no key is set, but user is trying Veo, we might use the popup flow (managed by window.aistudio)
-  // However, for other agents, we MUST have a key.
-  const isVideo = agent.type === 'video';
-  if (!apiKey && !isVideo) {
-      return { 
-          type: 'error', 
-          data: '⚠️ Configuração de SaaS Necessária: Nenhuma chave de API encontrada. Vá em "Meu Perfil" > "Configurações do SaaS" e insira sua Google API Key para ativar a plataforma.' 
-      };
+  // Handle Veo API Key Selection
+  if (agent.type === 'video') {
+      if (typeof window !== 'undefined' && (window as any).aistudio) {
+          const hasKey = await (window as any).aistudio.hasSelectedApiKey();
+          if (!hasKey) {
+               await (window as any).aistudio.openSelectKey();
+               // Proceed immediately as per guidelines (race condition handling)
+          }
+      }
   }
 
-  // Initialize AI with the retrieved key
-  const client = new GoogleGenerativeAI(apiKey || '');
+  // Initialize AI with process.env.API_KEY as mandated
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
     // Determine model: Use specific agent model if defined, else default based on type
-    let modelName = agent.model || 'gemini-2.0-flash';
+    let modelName = agent.model;
+    if (!modelName) {
+        // Fallbacks if model not specified in Agent constant
+        if (agent.type === 'image') modelName = 'gemini-2.5-flash-image';
+        else if (agent.type === 'video') modelName = 'veo-3.1-fast-generate-preview';
+        else if (agent.type === 'audio') modelName = 'gemini-2.5-flash-preview-tts';
+        else modelName = 'gemini-2.5-flash';
+    }
 
     // TEXT / REASONING AGENTS
     if (agent.type === 'text') {
         setLoadingMessage(agent.thinkingBudget ? 'Pensando profundamente...' : 'Gerando resposta...');
         
-        const model = client.getGenerativeModel({
-            model: modelName,
+        const config: any = {
             systemInstruction: agent.systemInstruction,
-        });
-
-        const generationConfig: any = {
             temperature: agent.thinkingBudget ? undefined : 0.7,
-            maxOutputTokens: 4096,
         };
 
-        const result = await model.generateContent({
-            contents: [{ role: 'user', parts: [{ text: userInput }] }],
-            generationConfig,
-        });
+        // Add thinking config if the agent requires it (e.g. Deep Reasoner)
+        if (agent.thinkingBudget) {
+            config.thinkingConfig = { thinkingBudget: agent.thinkingBudget };
+        }
 
-        const responseText = result.response.text();
-        return { type: 'text', data: responseText || "Sem resposta do modelo." };
+        const textResponse = await ai.models.generateContent({
+          model: modelName,
+          contents: userInput,
+          config: config
+        });
+        
+        return { type: 'text', data: textResponse.text || "Sem resposta do modelo." };
     }
 
     // IMAGE GENERATION
     if (agent.type === 'image') {
         setLoadingMessage('Criando arte visual...');
-        return { 
-            type: 'error', 
-            data: 'Geração de imagens requer configuração adicional. Use a API ImageGen separadamente.' 
-        };
+        const ratio = additionalParams.aspectRatio || '1:1';
+        
+        if (modelName.includes('imagen')) {
+            // Imagen Model (e.g. imagen-4.0-generate-001)
+            const imageResponse = await ai.models.generateImages({
+                model: modelName,
+                prompt: userInput,
+                config: {
+                  numberOfImages: 1,
+                  outputMimeType: 'image/jpeg',
+                  aspectRatio: ratio,
+                },
+            });
+            const base64ImageBytes = imageResponse.generatedImages[0].image.imageBytes;
+            return { type: 'image', data: `data:image/jpeg;base64,${base64ImageBytes}` };
+        } else {
+            // Gemini Image Model (e.g. gemini-2.5-flash-image)
+            const imageResponse = await ai.models.generateContent({
+                model: modelName,
+                contents: {
+                    parts: [
+                        { text: userInput } // Text prompt only for simple generation
+                    ]
+                },
+                config: {
+                    imageConfig: {
+                        aspectRatio: ratio
+                    }
+                }
+            });
+            
+            for (const part of imageResponse.candidates[0].content.parts) {
+                if (part.inlineData) {
+                    const base64EncodeString: string = part.inlineData.data;
+                    return { type: 'image', data: `data:image/png;base64,${base64EncodeString}` };
+                }
+            }
+            throw new Error("Nenhuma imagem encontrada na resposta.");
+        }
     }
 
     // AUDIO GENERATION
     if (agent.type === 'audio') {
         setLoadingMessage('Sintetizando voz...');
-        const model = client.getGenerativeModel({
+        const audioResponse = await ai.models.generateContent({
             model: modelName,
+            contents: [{ parts: [{ text: userInput }] }],
+            config: {
+                responseModalities: [Modality.AUDIO],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: 'Kore' }, // Could make this configurable later
+                    },
+                },
+            },
         });
-
-        const result = await model.generateContent({
-            contents: [{ role: 'user', parts: [{ text: userInput }] }],
-        });
-
-        const responseText = result.response.text();
-        return { type: 'audio', data: responseText };
+        const base64Audio = audioResponse.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (!base64Audio) throw new Error("A resposta de áudio estava vazia.");
+        const wavUri = createWavDataUri(base64Audio);
+        return { type: 'audio', data: wavUri };
     }
 
     // VIDEO GENERATION
     if (agent.type === 'video') {
-        return { 
-            type: 'error', 
-            data: 'Geração de vídeos requer integração especial com Veo.' 
-        };
+        setLoadingMessage('Verificando permissões do Veo...');
+        // Key selection is handled at the start of function
+
+        setLoadingMessage('Renderizando vídeo com Veo (isso pode levar 1-2 minutos)...');
+        
+        let operation = await ai.models.generateVideos({
+            model: modelName,
+            prompt: userInput,
+            config: {
+                numberOfVideos: 1,
+                resolution: '720p',
+                aspectRatio: '16:9'
+            }
+        });
+
+        let pollCount = 0;
+        while (!operation.done) {
+            pollCount++;
+            setLoadingMessage(`Renderizando... (${pollCount}0s)`);
+            await new Promise(resolve => setTimeout(resolve, 10000)); // Poll every 10s
+            operation = await ai.operations.getVideosOperation({ operation: operation });
+        }
+
+        setLoadingMessage('Finalizando download...');
+        const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+        if (!downloadLink) throw new Error("URI de download do vídeo não encontrado.");
+        
+        // The response.body contains the MP4 bytes. Append API key.
+        // use process.env.API_KEY as explicitly required
+        const videoResponse = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+        if (!videoResponse.ok) throw new Error("Falha ao fazer download do vídeo.");
+
+        const videoBlob = await videoResponse.blob();
+        const videoUrl = URL.createObjectURL(videoBlob);
+        return { type: 'video', data: videoUrl };
     }
 
     throw new Error(`Tipo de agente não suportado: ${agent.type}`);
 
   } catch (error: any) {
     console.error(`Erro ao chamar a API Gemini para o agente ${agent.id}:`, error);
-    return { 
-        type: 'error', 
-        data: `Ocorreu um erro no processamento: ${error.message}. Verifique se a API Key está correta e ativa.`
-    };
+    // Reset key selection on specific error for Veo
+    if (agent.type === 'video' && error.message?.includes('Requested entity was not found')) {
+        if (typeof window !== 'undefined' && (window as any).aistudio) {
+             await (window as any).aistudio.openSelectKey();
+        }
+        return { type: 'error', data: `Erro de Autenticação: A chave de API selecionada pode ser inválida. Selecione novamente.`};
+    }
+    return { type: 'error', data: `Ocorreu um erro no processamento: ${error.message}.`};
   }
 };
