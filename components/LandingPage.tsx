@@ -1,33 +1,28 @@
 
 import React, { useState } from 'react';
 import { SparklesIcon, CheckBadgeIcon, UserGroupIcon, ArrowPathIcon } from './Icons';
+import { useAuth } from '../AuthContext';
 
-interface LandingPageProps {
-  onLogin: () => Promise<void> | void;
-  onGuestLogin: () => Promise<void> | void;
-}
-
-const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onGuestLogin }) => {
-  // Estado local para controlar o feedback visual de carregamento
+const LandingPage: React.FC = () => {
+  const { handleLogin, handleGuestLogin } = useAuth();
   const [isLoading, setIsLoading] = useState<'google' | 'guest' | null>(null);
 
-  const handleGoogleLogin = async () => {
+  const onGoogleLogin = async () => {
     if (isLoading) return;
     setIsLoading('google');
     try {
-      await onLogin();
-      // Se o login for redirecionado, o estado persiste até o reload.
+      await handleLogin();
     } catch (e) {
       console.error(e);
-      setIsLoading(null); // Reseta apenas em erro
+      setIsLoading(null);
     }
   };
 
-  const handleGuestClick = async () => {
+  const onGuestClick = async () => {
     if (isLoading) return;
     setIsLoading('guest');
     try {
-      await onGuestLogin();
+      await handleGuestLogin();
     } catch (e) {
       console.error(e);
       setIsLoading(null);
@@ -46,7 +41,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onGuestLogin }) => {
         </div>
         <div className="flex gap-3">
             <button 
-            onClick={handleGuestClick}
+            onClick={onGuestClick}
             disabled={!!isLoading}
             className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors text-xs font-medium border border-white/10 text-brand-text-secondary hover:text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
@@ -54,7 +49,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onGuestLogin }) => {
             Visitante
             </button>
             <button 
-            onClick={handleGoogleLogin}
+            onClick={onGoogleLogin}
             disabled={!!isLoading}
             className="px-5 py-2 rounded-full bg-brand-accent hover:bg-brand-accent-hover transition-colors text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
@@ -85,7 +80,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onGuestLogin }) => {
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button 
-              onClick={handleGoogleLogin}
+              onClick={onGoogleLogin}
               disabled={!!isLoading}
               className="bg-brand-accent hover:bg-brand-accent-hover text-white px-8 py-4 rounded-xl font-bold transition-all hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] flex items-center justify-center gap-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed min-w-[220px]"
             >
@@ -93,12 +88,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onGuestLogin }) => {
                {isLoading === 'google' ? 'Conectando...' : 'Entrar com Google'}
             </button>
             <button 
-              onClick={handleGuestClick}
+              onClick={onGuestClick}
               disabled={!!isLoading}
               className="bg-brand-surface hover:bg-white/10 text-white border border-white/10 px-8 py-4 rounded-xl font-medium transition-all flex items-center justify-center gap-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed min-w-[220px]"
             >
                {isLoading === 'guest' ? <ArrowPathIcon className="h-5 w-5 animate-spin" /> : <UserGroupIcon className="h-5 w-5" />}
-               {isLoading === 'guest' ? 'Acessando...' : 'Acesso Visitante'}
+               {isLoading === 'guest' ? 'Acesso Visitante'}
             </button>
         </div>
         <p className="mt-4 text-xs text-brand-text-secondary opacity-60">
@@ -147,7 +142,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onGuestLogin }) => {
                  ))}
                </ul>
                
-               <button onClick={handleGuestClick} disabled={!!isLoading} className="w-full py-3 rounded-xl border border-white/20 hover:bg-white/5 transition-colors font-bold disabled:opacity-50 flex items-center justify-center gap-2">
+               <button onClick={onGuestClick} disabled={!!isLoading} className="w-full py-3 rounded-xl border border-white/20 hover:bg-white/5 transition-colors font-bold disabled:opacity-50 flex items-center justify-center gap-2">
                   {isLoading === 'guest' ? <ArrowPathIcon className="h-4 w-4 animate-spin" /> : null}
                   Testar Grátis (Visitante)
                </button>
@@ -157,7 +152,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onGuestLogin }) => {
             <div className="relative p-8 rounded-3xl bg-gradient-to-b from-brand-surface to-brand-accent/10 border border-brand-accent/50 flex flex-col transform md:-translate-y-4 shadow-2xl">
                <div className="absolute top-0 right-0 bg-brand-accent text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl">POPULAR</div>
                <h3 className="text-xl font-bold text-white">Pro Master</h3>
-               <div className="my-4"><span className="text-4xl font-bold">R$ 49,90</span><span className="text-brand-text-secondary">/mês</span></div>
+               <div className="my-4"><span className="text-4xl font-bold">R$ 29,90</span><span className="text-brand-text-secondary">/mês</span></div>
                <p className="text-brand-text-secondary text-sm mb-8">Poder total para criadores e profissionais.</p>
                
                <ul className="space-y-3 mb-8 flex-1">
@@ -168,7 +163,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onGuestLogin }) => {
                  ))}
                </ul>
                
-               <button onClick={handleGoogleLogin} disabled={!!isLoading} className="w-full py-3 rounded-xl bg-brand-accent hover:bg-brand-accent-hover transition-colors font-bold text-white shadow-lg shadow-brand-accent/25 disabled:opacity-50 flex items-center justify-center gap-2">
+               <button onClick={onGoogleLogin} disabled={!!isLoading} className="w-full py-3 rounded-xl bg-brand-accent hover:bg-brand-accent-hover transition-colors font-bold text-white shadow-lg shadow-brand-accent/25 disabled:opacity-50 flex items-center justify-center gap-2">
                   {isLoading === 'google' ? <ArrowPathIcon className="h-4 w-4 animate-spin" /> : null}
                   Fazer Login e Assinar
                </button>

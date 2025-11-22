@@ -50,6 +50,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
   const handleStripeCheckout = async () => {
     setIsValidating(true);
     
+    // Open Stripe Checkout with the specific URL provided
+    window.open('https://buy.stripe.com/test_dRm8wR4FJe8Sfsg2n987K00', '_blank');
+
+    // Simulate webhook delay for demo purposes
     setTimeout(() => {
         setIsValidating(false);
         setShowPaymentSuccess(true);
@@ -58,7 +62,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
             onUpgrade();
             setShowPaymentSuccess(false);
         }, 2000);
-    }, 2000);
+    }, 5000);
   };
 
   const handleCancelSubmit = async () => {
@@ -146,7 +150,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
                             {isValidating ? (
                                 <>
                                     <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                                    Processando Pagamento...
+                                    Confirmando Pagamento...
                                 </>
                             ) : showPaymentSuccess ? (
                                 <>
@@ -156,7 +160,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
                             ) : (
                                 <>
                                     <CreditCardIcon className="h-5 w-5" />
-                                    Assinar com Stripe (R$ 49,90)
+                                    Assinar com Stripe (R$ 29,90)
                                 </>
                             )}
                         </button>

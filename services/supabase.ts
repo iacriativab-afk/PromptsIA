@@ -3,11 +3,36 @@ import { createClient, SupabaseClient, User as SupabaseUser } from '@supabase/su
 import type { User } from '../types';
 
 // --- CONFIGURAÇÃO DO SUPABASE ---
-// Casting 'import.meta' para 'any' para evitar erros de TypeScript com 'env'
-const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
-const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
 
-let supabase: SupabaseClient | null = null;
+// FALLBACKS DE SEGURANÇA (Baseado nas chaves fornecidas)
+// Usamos estes valores caso o import.meta.env falhe ou esteja indefinido
+const FALLBACK_URL = "https://jczdzujewyylnordhrpp.supabase.co";
+const FALLBACK_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjemR6dWpld3l5bG5vcmRocnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3MTMzMTAsImV4cCI6MjA3OTI4OTMxMH0.c2hlgDZgbWGvXqbgyNKeEScLdp34y4l7YirxrzD55-c";
+
+let supabaseUrl = FALLBACK_URL;
+let supabaseAnonKey = FALLBACK_ANON_KEY;
+
+// Tentativa segura de ler variáveis de ambiente (se disponíveis)
+try {
+    // @ts-ignore: Evita erros de linting se import.meta não for reconhecido
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+        // @ts-ignore
+        if (import.meta.env.VITE_SUPABASE_URL) {
+            // @ts-ignore
+            supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        }
+        // @ts-ignore
+        if (import.meta.env.VITE_SUPABASE_ANON_KEY) {
+            // @ts-ignore
+            supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        }
+    }
+} catch (e) {
+    console.warn("⚠️ Ambiente Vite não detectado ou erro ao ler variáveis. Usando chaves de fallback.");
+}
+
+// EXPORTING SUPABASE INSTANCE FOR CONTEXT
+export let supabase: SupabaseClient | null = null;
 let isSupabaseInitialized = false;
 
 if (supabaseUrl && supabaseAnonKey) {
@@ -19,7 +44,7 @@ if (supabaseUrl && supabaseAnonKey) {
         console.error("⚠️ Falha crítica ao inicializar cliente Supabase:", e);
     }
 } else {
-    console.error("⚠️ Variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY não encontradas. Verifique seu arquivo .env.local.");
+    console.error("⚠️ Chaves do Supabase não encontradas nem no ambiente nem nos fallbacks.");
 }
 
 // --- CONTROLE DE MODO (REAL vs DEMO) ---
@@ -38,54 +63,7 @@ const mapSupabaseUser = (sbUser: SupabaseUser, profileData: any): User => {
     };
 };
 
-export const subscribeToAuthChanges = (callback: (user: User | null) => void) => {
-    // 1. Verifica se há um usuário "Mock/Visitante" salvo localmente
-    const savedMockUser = localStorage.getItem(STORAGE_KEY_USER);
-    if (savedMockUser) {
-        try {
-            const parsed = JSON.parse(savedMockUser);
-            const currentTier = localStorage.getItem(STORAGE_KEY_TIER) as 'free' | 'pro' || parsed.tier;
-            callback({ ...parsed, tier: currentTier });
-        } catch (e) {
-            console.error("Erro ao ler usuário do localStorage", e);
-            callback(null);
-        }
-        return () => {};
-    }
-
-    // 2. Se o Supabase estiver ativo, usa o listener real
-    if (isSupabaseInitialized && supabase) {
-        // Tenta pegar a sessão atual imediatamente
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session?.user) {
-                fetchProfile(session.user).then(user => callback(user));
-            } else {
-                callback(null);
-            }
-        }).catch((err) => {
-             console.warn("Erro ao buscar sessão inicial:", err);
-             callback(null); 
-        });
-
-        // Escuta mudanças de estado (login, logout, etc)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (session?.user) {
-                const user = await fetchProfile(session.user);
-                callback(user);
-            } else if (event === 'SIGNED_OUT') {
-                callback(null);
-            }
-        });
-
-        return () => subscription.unsubscribe();
-    } else {
-        // Fallback: Backend inativo
-        callback(null);
-        return () => {};
-    }
-};
-
-const fetchProfile = async (sbUser: SupabaseUser): Promise<User> => {
+export const fetchProfile = async (sbUser: SupabaseUser): Promise<User> => {
     if (!supabase) return mapSupabaseUser(sbUser, {});
 
     try {
@@ -124,8 +102,11 @@ export const loginAsGuest = async (): Promise<void> => {
 // --- AUTENTICAÇÃO: GOOGLE ---
 export const signInWithGoogle = async (): Promise<void> => {
     if (!isSupabaseInitialized || !supabase) {
-        alert("Supabase não configurado corretamente (faltam chaves no .env). Tentando modo visitante.");
-        return loginAsGuest();
+        // Se o Supabase falhar, oferecemos o modo visitante como fallback amigável
+        if(confirm("Não foi possível conectar ao servidor de login. Deseja entrar como visitante?")) {
+            return loginAsGuest();
+        }
+        return;
     }
 
     try {
@@ -139,7 +120,7 @@ export const signInWithGoogle = async (): Promise<void> => {
         if (error) throw error;
     } catch (error: any) {
         console.error("Erro no login Google:", error);
-        alert(`Falha no login com Google: ${error.message || 'Erro desconhecido'}. Por favor, tente novamente ou verifique se os pop-ups estão permitidos.`);
+        alert(`Falha no login com Google: ${error.message || 'Erro desconhecido'}.`);
         throw error;
     }
 };

@@ -1,3 +1,4 @@
+
 import type { Agent, Prompt, Course } from './types';
 import { AcademicCapIcon, BookOpenIcon, MegaphoneIcon, FilmIcon, Bars3BottomLeftIcon, PencilSquareIcon, LanguageIcon, PhotoIcon, SpeakerWaveIcon, VideoCameraIcon, CodeBracketIcon, LightBulbIcon, CreditCardIcon, SparklesIcon, ScissorsIcon } from './components/Icons';
 
@@ -243,7 +244,7 @@ export const AGENTS: Agent[] = [
     coverGradient: 'from-yellow-600 to-orange-900',
     backgroundImage: 'https://images.unsplash.com/photo-1478737270239-2f02b77ac6d5?q=80&w=800&auto=format&fit=crop',
     requiresPro: true
-  },
+  }
 ];
 
 export const PROMPTS: Prompt[] = [
@@ -353,7 +354,7 @@ export const COURSES: Course[] = [
             isCompleted: true,
             videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
              poster: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=1200&auto=format&fit=crop'
-          },
+          }
         ]
       },
       {
@@ -367,7 +368,7 @@ export const COURSES: Course[] = [
             isCompleted: false,
             videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
             poster: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1200&auto=format&fit=crop'
-          },
+          }
         ]
       }
     ]
@@ -392,7 +393,7 @@ export const COURSES: Course[] = [
             isCompleted: false,
             videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
             poster: 'https://images.unsplash.com/photo-1535016120720-40c6874c3b13?q=80&w=1200&auto=format&fit=crop'
-          },
+          }
         ]
       }
     ]
@@ -417,7 +418,7 @@ export const COURSES: Course[] = [
             isCompleted: false,
             videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
             poster: 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?q=80&w=1200&auto=format&fit=crop'
-          },
+          }
         ]
       }
     ]
