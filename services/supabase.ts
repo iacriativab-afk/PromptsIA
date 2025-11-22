@@ -1,53 +1,60 @@
 import { createClient, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 import type { User } from '../types';
 
-// --- CONFIGURAÇÃO DO SUPABASE ---
+// --- CONFIGURAÇÃO DO SUPABASE COM SEGURANÇA ---
 
-// FALLBACKS DE SEGURANÇA (Para ambiente de desenvolvimento local sem .env)
-const FALLBACK_URL = "https://jczdzujewyylnordhrpp.supabase.co"; 
-const FALLBACK_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjemR6dWpld3l5bG5vcmRocnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3MTMzMTAsImV4cCI6MjA3OTI4OTMxMH0.c2hlgDZgbWGvXqbgyNKeEScLdp34y4l7YirxrzD55-c";
+// NUNCA coloque chaves reais no código. Sempre use variáveis de ambiente
+const getSupabaseConfig = () => {
+    const url = import.meta.env.VITE_SUPABASE_URL;
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-let supabaseUrl = FALLBACK_URL;
-let supabaseAnonKey = FALLBACK_ANON_KEY;
-
-// Tentativa segura de ler variáveis de ambiente (Vite/Vercel)
-try {
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env) {
-        // @ts-ignore
-        if (import.meta.env.VITE_SUPABASE_URL) {
-            // @ts-ignore
-            supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        }
-        // @ts-ignore
-        if (import.meta.env.VITE_SUPABASE_ANON_KEY) {
-            // @ts-ignore
-            supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        }
+    // Em desenvolvimento, avisar se chaves não estão configuradas
+    if (!url || !key) {
+        console.warn("⚠️ Variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY não configuradas. Configure .env.local");
     }
-} catch (e) {
-    console.warn("⚠️ Ambiente Vite não detectado ou erro ao ler variáveis. Usando chaves de fallback.");
-}
 
-// EXPORTING SUPABASE INSTANCE FOR CONTEXT
+    return { url: url || '', key: key || '' };
+};
+
+const { url: supabaseUrl, key: supabaseAnonKey } = getSupabaseConfig();
+
+// Instância do Supabase
 export let supabase: SupabaseClient | null = null;
 let isSupabaseInitialized = false;
 
+// Inicializar com validação
 if (supabaseUrl && supabaseAnonKey) {
     try {
-        supabase = createClient(supabaseUrl, supabaseAnonKey);
+        supabase = createClient(supabaseUrl, supabaseAnonKey, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+            },
+        });
         isSupabaseInitialized = true;
-        console.log("⚡ Supabase conectado.");
+        console.log("⚡ Supabase inicializado com sucesso.");
     } catch (e) {
-        console.error("⚠️ Falha crítica ao inicializar cliente Supabase:", e);
+        console.error("❌ Erro ao inicializar Supabase:", e);
     }
 } else {
-    console.error("⚠️ Chaves do Supabase não encontradas.");
+    console.warn("⚠️ Supabase não será inicializado - chaves de ambiente ausentes.");
 }
 
 // --- CONTROLE DE MODO (REAL vs DEMO) ---
 const STORAGE_KEY_USER = 'promptsia_user';
 const STORAGE_KEY_TIER = 'promptsia_user_tier';
+
+// Validação de dados do localStorage
+const isValidUser = (obj: any): obj is User => {
+    return (
+        obj &&
+        typeof obj === 'object' &&
+        typeof obj.id === 'string' &&
+        typeof obj.name === 'string' &&
+        typeof obj.email === 'string' &&
+        (obj.tier === 'free' || obj.tier === 'pro')
+    );
+};
 
 // Helper para mapear usuário do Supabase para nosso tipo User
 const mapSupabaseUser = (sbUser: SupabaseUser, profileData: any): User => {

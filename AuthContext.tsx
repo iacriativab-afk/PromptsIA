@@ -25,13 +25,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true;
 
+    // Validação segura de dados do localStorage
+    const isValidUser = (obj: any): obj is User => {
+        return (
+            obj &&
+            typeof obj === 'object' &&
+            typeof obj.id === 'string' &&
+            typeof obj.name === 'string' &&
+            typeof obj.email === 'string' &&
+            (obj.tier === 'free' || obj.tier === 'pro')
+        );
+    };
+
     // Check for Guest Mode in LocalStorage safely
     const savedMockUser = localStorage.getItem('promptsia_user');
     if (savedMockUser) {
         try {
             const parsed = JSON.parse(savedMockUser);
             // Ensure parsed object is valid before using
-            if (parsed && typeof parsed === 'object') {
+            if (isValidUser(parsed)) {
                 const currentTier = localStorage.getItem('promptsia_user_tier') as 'free' | 'pro' || parsed.tier;
                 if (mounted) {
                     setUser({ ...parsed, tier: currentTier });
@@ -40,11 +52,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
                 return;
             } else {
-                throw new Error("Invalid user object");
+                throw new Error("Invalid user object structure");
             }
         } catch (e) {
-            console.error("Erro ao ler usuário do localStorage (dados corrompidos)", e);
+            console.error("Erro ao ler usuário do localStorage (dados corrompidos):", e);
             localStorage.removeItem('promptsia_user'); // Clean bad data
+            localStorage.removeItem('promptsia_user_tier');
         }
     }
 
@@ -56,6 +69,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (session?.user) {
                      fetchProfile(session.user).then(u => {
                          if(mounted) setUser(u);
+                         setLoading(false);
+                     }).catch(err => {
+                         console.error("Erro ao buscar perfil:", err);
                          setLoading(false);
                      });
                 } else {
@@ -70,6 +86,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (session?.user) {
                     fetchProfile(session.user).then(u => {
                          if(mounted) setUser(u);
+                    }).catch(err => {
+                        console.error("Erro ao buscar perfil:", err);
                     });
                 } else {
                     // If not guest and logged out
