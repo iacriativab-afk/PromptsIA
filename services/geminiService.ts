@@ -71,7 +71,8 @@ export const runAgentGeneration = async (
     agent: Agent, 
     userInput: string,
     setLoadingMessage: (message: string) => void,
-    additionalParams: { aspectRatio?: string } = {}
+    additionalParams: { aspectRatio?: string } = {},
+    onUsageIncrement?: (type: 'text' | 'image' | 'video' | 'audio' | 'thinking', amount: number) => Promise<void>
 ): Promise<{ type: string; data: string }> => {
   
   // Handle Veo API Key Selection
@@ -119,6 +120,15 @@ export const runAgentGeneration = async (
           config: config
         });
         
+        // Track usage
+        if (onUsageIncrement) {
+          const tokenCount = textResponse.usageMetadata?.totalTokenCount || 0;
+          await onUsageIncrement('text', 1);
+          if (agent.thinkingBudget && textResponse.usageMetadata?.cachedContentTokenCount) {
+            await onUsageIncrement('thinking', textResponse.usageMetadata.cachedContentTokenCount);
+          }
+        }
+
         return { type: 'text', data: textResponse.text || "Sem resposta do modelo." };
     }
 
@@ -138,6 +148,12 @@ export const runAgentGeneration = async (
                   aspectRatio: ratio,
                 },
             });
+            
+            // Track usage
+            if (onUsageIncrement) {
+              await onUsageIncrement('image', 1);
+            }
+
             const base64ImageBytes = imageResponse.generatedImages[0].image.imageBytes;
             return { type: 'image', data: `data:image/jpeg;base64,${base64ImageBytes}` };
         } else {
@@ -155,6 +171,11 @@ export const runAgentGeneration = async (
                     }
                 }
             });
+            
+            // Track usage
+            if (onUsageIncrement) {
+              await onUsageIncrement('image', 1);
+            }
             
             for (const part of imageResponse.candidates[0].content.parts) {
                 if (part.inlineData) {
@@ -181,6 +202,12 @@ export const runAgentGeneration = async (
                 },
             },
         });
+        
+        // Track usage
+        if (onUsageIncrement) {
+          await onUsageIncrement('audio', 1);
+        }
+
         const base64Audio = audioResponse.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (!base64Audio) throw new Error("A resposta de áudio estava vazia.");
         const wavUri = createWavDataUri(base64Audio);
@@ -220,6 +247,11 @@ export const runAgentGeneration = async (
         // use process.env.API_KEY as explicitly required
         const videoResponse = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
         if (!videoResponse.ok) throw new Error("Falha ao fazer download do vídeo.");
+
+        // Track usage
+        if (onUsageIncrement) {
+          await onUsageIncrement('video', 1);
+        }
 
         const videoBlob = await videoResponse.blob();
         const videoUrl = URL.createObjectURL(videoBlob);
