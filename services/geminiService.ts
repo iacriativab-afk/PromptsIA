@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Modality } from "@google/genai";
 import type { Agent } from '../types';
 
@@ -70,13 +69,26 @@ function createWavDataUri(base64Pcm: string, sampleRate = 24000): string {
 // Retrieves API Key from Admin Settings (LocalStorage) or Environment
 const getApiKey = () => {
     // 1. Priority: Admin Key set in UserProfile
-    const storedKey = localStorage.getItem('PROMPTSIA_API_KEY');
-    if (storedKey) return storedKey;
+    try {
+        const storedKey = localStorage.getItem('PROMPTSIA_API_KEY');
+        if (storedKey) return storedKey;
+    } catch (e) { console.warn('LocalStorage access error'); }
 
-    // 2. Fallback: Environment Variable (if configured in Vite/Build)
-    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-        return process.env.API_KEY;
-    }
+    // 2. Fallback: process.env (Standard Node/Webpack)
+    try {
+        if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+            return process.env.API_KEY;
+        }
+    } catch (e) { /* ignore */ }
+
+    // 3. Fallback: import.meta.env (Vite)
+    try {
+        // @ts-ignore
+        if (import.meta && import.meta.env && import.meta.env.VITE_API_KEY) {
+             // @ts-ignore
+             return import.meta.env.VITE_API_KEY;
+        }
+    } catch(e) { /* ignore */ }
 
     return null;
 };
@@ -93,7 +105,8 @@ export const runAgentGeneration = async (
 
   // Exception: If no key is set, but user is trying Veo, we might use the popup flow (managed by window.aistudio)
   // However, for other agents, we MUST have a key.
-  if (!apiKey && agent.type !== 'video') {
+  const isVideo = agent.type === 'video';
+  if (!apiKey && !isVideo) {
       return { 
           type: 'error', 
           data: '⚠️ Configuração de SaaS Necessária: Nenhuma chave de API encontrada. Vá em "Meu Perfil" > "Configurações do SaaS" e insira sua Google API Key para ativar a plataforma.' 
@@ -179,10 +192,16 @@ export const runAgentGeneration = async (
     if (agent.type === 'video') {
         setLoadingMessage('Verificando chave de API...');
         
+        // Safety check for window.aistudio
+        const hasAiStudio = typeof window !== 'undefined' && 'aistudio' in window && (window as any).aistudio;
+
         // For Veo, we prefer the specific key selection flow if available/required
         // But if Admin Key is present, we can try to use it directly via SDK
-        if (!apiKey && !(await window.aistudio.hasSelectedApiKey())) {
-             await window.aistudio.openSelectKey();
+        if (!apiKey && hasAiStudio) {
+            const hasKey = await (window as any).aistudio.hasSelectedApiKey();
+            if (!hasKey) {
+                 await (window as any).aistudio.openSelectKey();
+            }
         }
         
         setLoadingMessage('Renderizando vídeo com Veo (isso pode levar 1-2 minutos)...');

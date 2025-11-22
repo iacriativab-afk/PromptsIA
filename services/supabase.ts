@@ -1,20 +1,18 @@
-
 import { createClient, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 import type { User } from '../types';
 
 // --- CONFIGURAÇÃO DO SUPABASE ---
 
-// FALLBACKS DE SEGURANÇA (Baseado nas chaves fornecidas)
-// Usamos estes valores caso o import.meta.env falhe ou esteja indefinido
-const FALLBACK_URL = "https://jczdzujewyylnordhrpp.supabase.co";
+// FALLBACKS DE SEGURANÇA (Para ambiente de desenvolvimento local sem .env)
+const FALLBACK_URL = "https://jczdzujewyylnordhrpp.supabase.co"; 
 const FALLBACK_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjemR6dWpld3l5bG5vcmRocnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3MTMzMTAsImV4cCI6MjA3OTI4OTMxMH0.c2hlgDZgbWGvXqbgyNKeEScLdp34y4l7YirxrzD55-c";
 
 let supabaseUrl = FALLBACK_URL;
 let supabaseAnonKey = FALLBACK_ANON_KEY;
 
-// Tentativa segura de ler variáveis de ambiente (se disponíveis)
+// Tentativa segura de ler variáveis de ambiente (Vite/Vercel)
 try {
-    // @ts-ignore: Evita erros de linting se import.meta não for reconhecido
+    // @ts-ignore
     if (typeof import.meta !== 'undefined' && import.meta.env) {
         // @ts-ignore
         if (import.meta.env.VITE_SUPABASE_URL) {
@@ -44,7 +42,7 @@ if (supabaseUrl && supabaseAnonKey) {
         console.error("⚠️ Falha crítica ao inicializar cliente Supabase:", e);
     }
 } else {
-    console.error("⚠️ Chaves do Supabase não encontradas nem no ambiente nem nos fallbacks.");
+    console.error("⚠️ Chaves do Supabase não encontradas.");
 }
 
 // --- CONTROLE DE MODO (REAL vs DEMO) ---
@@ -74,6 +72,7 @@ export const fetchProfile = async (sbUser: SupabaseUser): Promise<User> => {
             .single();
 
         if (error || !data) {
+            // Se falhar ao buscar perfil (ex: tabela não existe), retorna dados básicos do Auth
             return mapSupabaseUser(sbUser, {});
         }
         return mapSupabaseUser(sbUser, data);
@@ -94,15 +93,18 @@ export const loginAsGuest = async (): Promise<void> => {
         joinDate: new Date().toISOString()
     };
     
-    localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(mockUser));
-    localStorage.setItem(STORAGE_KEY_TIER, 'free');
-    window.location.reload();
+    try {
+        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(mockUser));
+        localStorage.setItem(STORAGE_KEY_TIER, 'free');
+        window.location.reload();
+    } catch (e) {
+        console.error("Erro ao salvar usuário visitante:", e);
+    }
 };
 
 // --- AUTENTICAÇÃO: GOOGLE ---
 export const signInWithGoogle = async (): Promise<void> => {
     if (!isSupabaseInitialized || !supabase) {
-        // Se o Supabase falhar, oferecemos o modo visitante como fallback amigável
         if(confirm("Não foi possível conectar ao servidor de login. Deseja entrar como visitante?")) {
             return loginAsGuest();
         }
@@ -110,10 +112,13 @@ export const signInWithGoogle = async (): Promise<void> => {
     }
 
     try {
+        // Redireciona para a URL atual (funciona local e na Vercel)
+        const redirectUrl = window.location.origin;
+
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin // Garante retorno para a URL correta
+                redirectTo: redirectUrl
             }
         });
         
@@ -139,7 +144,9 @@ export const logoutUser = async (): Promise<void> => {
 // --- GERENCIAMENTO DE ASSINATURA ---
 export const upgradeUserTier = async (uid: string) => {
     localStorage.setItem(STORAGE_KEY_TIER, 'pro');
-    if (isSupabaseInitialized && supabase) {
+    
+    // Tenta persistir se o usuário estiver logado no Supabase
+    if (isSupabaseInitialized && supabase && !uid.startsWith('guest-')) {
         try {
             await supabase.from('profiles').update({ tier: 'pro', updated_at: new Date() }).eq('id', uid);
         } catch (e) { console.warn("Erro ao persistir upgrade:", e); }
@@ -148,7 +155,8 @@ export const upgradeUserTier = async (uid: string) => {
 
 export const downgradeUserTier = async (uid: string, feedback: string) => {
     localStorage.setItem(STORAGE_KEY_TIER, 'free');
-    if (isSupabaseInitialized && supabase) {
+    
+    if (isSupabaseInitialized && supabase && !uid.startsWith('guest-')) {
         try {
             await supabase.from('profiles').update({ 
                 tier: 'free', 

@@ -1,4 +1,3 @@
-
 import type { Agent, Prompt, Course } from './types';
 import { AcademicCapIcon, BookOpenIcon, MegaphoneIcon, FilmIcon, Bars3BottomLeftIcon, PencilSquareIcon, LanguageIcon, PhotoIcon, SpeakerWaveIcon, VideoCameraIcon, CodeBracketIcon, LightBulbIcon, CreditCardIcon, SparklesIcon, ScissorsIcon } from './components/Icons';
 
