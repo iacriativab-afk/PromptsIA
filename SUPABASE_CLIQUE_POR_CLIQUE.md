@@ -10,7 +10,7 @@
 
 ```
 URL do Supabase que você vê agora:
-https://supabase.com/dashboard/project/miyzvptgfehssglty/sql/04955cc3-88f1-46eb-8ade-f0b7d39c5e3e
+https://supabase.com/dashboard/project/<SEU_PROJECT_ID>/sql/<QUERY_ID>
 
 Você está em: SQL Editor ✅ (lugar certo!)
 ```
