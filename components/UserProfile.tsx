@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { SparklesIcon, CheckBadgeIcon, CreditCardIcon, ArrowPathIcon, XIcon, CodeBracketIcon } from './Icons';
 import { downgradeUserTier } from '../services/supabase';
+import { startStripeCheckout } from '../services/stripe';
 
 interface UserProfileProps {
   user: User;
@@ -50,19 +51,17 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
   const handleStripeCheckout = async () => {
     setIsValidating(true);
     
-    // Open Stripe Checkout with the specific URL provided
-    window.open('https://buy.stripe.com/test_dRm8wR4FJe8Sfsg2n987K00', '_blank');
-
-    // Simulate webhook delay for demo purposes
-    setTimeout(() => {
-        setIsValidating(false);
-        setShowPaymentSuccess(true);
-        
-        setTimeout(() => {
-            onUpgrade();
-            setShowPaymentSuccess(false);
-        }, 2000);
-    }, 5000);
+    try {
+      // Usar a nova integração Stripe
+      await startStripeCheckout(user, 'pro_monthly');
+      
+      // Nota: Após retornar do Stripe, o webhook atualizará o banco de dados
+      // O componente será re-renderizado quando o usuário voltar
+    } catch (error: any) {
+      console.error('Erro ao iniciar checkout:', error);
+      alert(`Erro: ${error.message || 'Falha ao processar pagamento'}`);
+      setIsValidating(false);
+    }
   };
 
   const handleCancelSubmit = async () => {

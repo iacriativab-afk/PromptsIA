@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User } from '../types';
 import { SparklesIcon, XIcon } from './Icons';
+import { startStripeCheckout } from '../services/stripe';
 
 interface LimitReachedModalProps {
   isOpen: boolean;
@@ -21,7 +22,19 @@ const LimitReachedModal: React.FC<LimitReachedModalProps> = ({
   limit,
   user
 }) => {
+  const [isLoading, setIsLoading] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleUpgradeClick = async () => {
+    setIsLoading(true);
+    try {
+      await startStripeCheckout(user, 'pro_monthly');
+    } catch (error) {
+      console.error('Erro ao iniciar checkout:', error);
+      setIsLoading(false);
+    }
+  };
 
   const typeLabels = {
     text: 'Gerações de Texto',
@@ -122,15 +135,17 @@ const LimitReachedModal: React.FC<LimitReachedModalProps> = ({
           {/* CTA Buttons */}
           <div className="flex flex-col gap-3">
             <button
-              onClick={onUpgrade}
+              onClick={handleUpgradeClick}
+              disabled={isLoading}
               className={`
                 w-full py-3 rounded-lg font-bold transition-all
                 bg-gradient-to-r ${typeColors[type]}
                 text-white hover:shadow-lg hover:shadow-brand-accent/20
                 active:scale-95
+                ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
               `}
             >
-              Faça Upgrade Agora
+              {isLoading ? 'Carregando Stripe...' : 'Faça Upgrade Agora'}
             </button>
             <button
               onClick={onClose}
