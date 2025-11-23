@@ -55,12 +55,23 @@ export async function getUserUsage(userId: string): Promise<UserUsage> {
       const { data, error } = await supabase
         .from('user_usage')
         .select('*')
-        .eq('userId', userId)
+        .eq('user_id', userId)
         .eq('month', month)
         .single();
 
       if (data && !error) {
-        return data as UserUsage;
+        // Mapear snake_case do Supabase para camelCase do app
+        return {
+          userId: data.user_id,
+          month: data.month,
+          textGenerations: data.text_generations,
+          imageGenerations: data.image_generations,
+          videoGenerations: data.video_generations,
+          audioGenerations: data.audio_generations,
+          thinkingTokensUsed: data.thinking_tokens_used,
+          totalTokensUsed: data.total_tokens_used,
+          lastUpdated: data.updated_at
+        };
       }
     }
   } catch (e) {
@@ -134,9 +145,21 @@ export async function incrementUsage(
   // Salvar em Supabase (background)
   if (supabase) {
     try {
+      // Mapear camelCase do app para snake_case do Supabase
+      const supabaseData = {
+        user_id: userId,
+        month: month,
+        text_generations: usage.textGenerations,
+        image_generations: usage.imageGenerations,
+        video_generations: usage.videoGenerations,
+        audio_generations: usage.audioGenerations,
+        thinking_tokens_used: usage.thinkingTokensUsed,
+        total_tokens_used: usage.totalTokensUsed
+      };
+
       await supabase
         .from('user_usage')
-        .upsert(usage, { onConflict: 'userId,month' })
+        .upsert(supabaseData, { onConflict: 'user_id,month' })
         .select();
     } catch (e) {
       console.warn('Failed to sync usage to Supabase:', e);
