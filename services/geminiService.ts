@@ -104,8 +104,12 @@ export const runAgentGeneration = async (
     if (agent.type === 'text') {
         setLoadingMessage(agent.thinkingBudget ? 'Pensando profundamente...' : 'Gerando resposta...');
         
-        const config: any = {
+        const model = ai.getGenerativeModel({ 
+            model: modelName,
             systemInstruction: agent.systemInstruction,
+        });
+
+        const config: any = {
             temperature: agent.thinkingBudget ? undefined : 0.7,
         };
 
@@ -114,10 +118,9 @@ export const runAgentGeneration = async (
             config.thinkingConfig = { thinkingBudget: agent.thinkingBudget };
         }
 
-        const textResponse = await ai.models.generateContent({
-          model: modelName,
-          contents: userInput,
-          config: config
+        const textResponse = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: userInput }] }],
+          generationConfig: config
         });
         
         // Track usage
@@ -137,70 +140,43 @@ export const runAgentGeneration = async (
         setLoadingMessage('Criando arte visual...');
         const ratio = additionalParams.aspectRatio || '1:1';
         
-        if (modelName.includes('imagen')) {
-            // Imagen Model (e.g. imagen-4.0-generate-001)
-            const imageResponse = await ai.models.generateImages({
-                model: modelName,
-                prompt: userInput,
-                config: {
-                  numberOfImages: 1,
-                  outputMimeType: 'image/jpeg',
-                  aspectRatio: ratio,
-                },
-            });
-            
-            // Track usage
-            if (onUsageIncrement) {
-              await onUsageIncrement('image', 1);
+        const model = ai.getGenerativeModel({ model: modelName });
+        
+        const imageResponse = await model.generateContent({
+            contents: [{ 
+                parts: [{ text: userInput }] 
+            }],
+            generationConfig: {
+                temperature: 0.8
             }
-
-            const base64ImageBytes = imageResponse.generatedImages[0].image.imageBytes;
-            return { type: 'image', data: `data:image/jpeg;base64,${base64ImageBytes}` };
-        } else {
-            // Gemini Image Model (e.g. gemini-2.5-flash-image)
-            const imageResponse = await ai.models.generateContent({
-                model: modelName,
-                contents: {
-                    parts: [
-                        { text: userInput } // Text prompt only for simple generation
-                    ]
-                },
-                config: {
-                    imageConfig: {
-                        aspectRatio: ratio
-                    }
-                }
-            });
-            
-            // Track usage
-            if (onUsageIncrement) {
-              await onUsageIncrement('image', 1);
-            }
-            
-            for (const part of imageResponse.candidates[0].content.parts) {
-                if (part.inlineData) {
-                    const base64EncodeString: string = part.inlineData.data;
-                    return { type: 'image', data: `data:image/png;base64,${base64EncodeString}` };
-                }
-            }
-            throw new Error("Nenhuma imagem encontrada na resposta.");
+        });
+        
+        // Track usage
+        if (onUsageIncrement) {
+          await onUsageIncrement('image', 1);
         }
+        
+        for (const part of imageResponse.candidates?.[0]?.content?.parts || []) {
+            if (part.inlineData) {
+                const base64EncodeString: string = part.inlineData.data;
+                return { type: 'image', data: `data:image/png;base64,${base64EncodeString}` };
+            }
+        }
+        throw new Error("Nenhuma imagem encontrada na resposta.");
     }
 
     // AUDIO GENERATION
     if (agent.type === 'audio') {
         setLoadingMessage('Sintetizando voz...');
-        const audioResponse = await ai.models.generateContent({
-            model: modelName,
-            contents: [{ parts: [{ text: userInput }] }],
-            config: {
-                responseModalities: [Modality.AUDIO],
-                speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: 'Kore' }, // Could make this configurable later
-                    },
-                },
-            },
+        const model = ai.getGenerativeModel({ model: modelName });
+        
+        const audioResponse = await model.generateContent({
+            contents: [{ 
+                parts: [{ text: userInput }] 
+            }],
+            generationConfig: {
+                temperature: 0.7
+            }
         });
         
         // Track usage
@@ -220,14 +196,14 @@ export const runAgentGeneration = async (
         // Key selection is handled at the start of function
 
         setLoadingMessage('Renderizando vídeo com Veo (isso pode levar 1-2 minutos)...');
+        const model = ai.getGenerativeModel({ model: modelName });
         
-        let operation = await ai.models.generateVideos({
-            model: modelName,
-            prompt: userInput,
-            config: {
-                numberOfVideos: 1,
-                resolution: '720p',
-                aspectRatio: '16:9'
+        let operation = await model.generateContent({
+            contents: [{ 
+                parts: [{ text: userInput }] 
+            }],
+            generationConfig: {
+                temperature: 0.7
             }
         });
 
@@ -236,26 +212,18 @@ export const runAgentGeneration = async (
             pollCount++;
             setLoadingMessage(`Renderizando... (${pollCount}0s)`);
             await new Promise(resolve => setTimeout(resolve, 10000)); // Poll every 10s
-            operation = await ai.operations.getVideosOperation({ operation: operation });
         }
 
         setLoadingMessage('Finalizando download...');
-        const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+        const downloadLink = operation.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (!downloadLink) throw new Error("URI de download do vídeo não encontrado.");
         
-        // The response.body contains the MP4 bytes. Append API key.
-        // use process.env.API_KEY as explicitly required
-        const videoResponse = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
-        if (!videoResponse.ok) throw new Error("Falha ao fazer download do vídeo.");
-
         // Track usage
         if (onUsageIncrement) {
           await onUsageIncrement('video', 1);
         }
 
-        const videoBlob = await videoResponse.blob();
-        const videoUrl = URL.createObjectURL(videoBlob);
-        return { type: 'video', data: videoUrl };
+        return { type: 'video', data: downloadLink };
     }
 
     throw new Error(`Tipo de agente não suportado: ${agent.type}`);
