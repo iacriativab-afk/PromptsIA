@@ -87,7 +87,7 @@ export const runAgentGeneration = async (
   }
 
   // Initialize AI with process.env.API_KEY as mandated
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenerativeAI({ apiKey: process.env.API_KEY });
 
   try {
     // Determine model: Use specific agent model if defined, else default based on type
