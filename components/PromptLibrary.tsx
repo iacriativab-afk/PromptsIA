@@ -75,7 +75,7 @@ const PromptLibrary: React.FC = () => {
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between p-4 bg-brand-secondary/30 rounded-xl border border-white/5">
                 
                 {/* Media Type Tabs */}
-                <div className="flex gap-2 overflow-x-auto no-scrollbar w-full md:w-auto">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar w-full md:w-auto mask-linear-fade">
                     {mediaTypes.map(type => (
                         <button
                             key={type.id}
@@ -109,10 +109,11 @@ const PromptLibrary: React.FC = () => {
         </div>
       </header>
 
-      <div className="masonry-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-10">
+      {/* Masonry Layout using CSS Columns */}
+      <div className="columns-1 md:columns-2 xl:columns-3 gap-6 pb-10 space-y-6">
         {filteredPrompts.length > 0 ? (
             filteredPrompts.map((prompt) => (
-            <div key={prompt.id} className="bg-brand-secondary border border-white/5 rounded-2xl p-6 flex flex-col hover:border-brand-accent/30 transition-all duration-300 shadow-sm hover:shadow-xl group relative overflow-hidden">
+            <div key={prompt.id} className="break-inside-avoid bg-brand-secondary border border-white/5 rounded-2xl p-6 flex flex-col hover:border-brand-accent/30 transition-all duration-300 shadow-sm hover:shadow-xl group relative overflow-hidden">
                 
                 {/* Pro Badge */}
                 {prompt.requiresPro && (
@@ -135,9 +136,9 @@ const PromptLibrary: React.FC = () => {
                     </div>
                 </div>
 
-                <h3 className="text-lg font-bold text-white mb-3 line-clamp-2">{prompt.title}</h3>
+                <h3 className="text-lg font-bold text-white mb-3 leading-snug">{prompt.title}</h3>
 
-                <div className="bg-black/30 rounded-xl p-4 mb-4 flex-1 overflow-hidden relative group-hover:bg-black/40 transition-colors border border-white/5">
+                <div className="bg-black/30 rounded-xl p-4 mb-4 flex-1 relative group-hover:bg-black/40 transition-colors border border-white/5">
                     <p className="text-brand-text-secondary text-sm font-mono line-clamp-6 selection:bg-brand-accent selection:text-white">
                         {prompt.content}
                     </p>
@@ -145,7 +146,7 @@ const PromptLibrary: React.FC = () => {
                     <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black/80 to-transparent"></div>
                 </div>
 
-                <div className="flex items-center justify-between mt-auto">
+                <div className="flex items-center justify-between mt-auto pt-2">
                     <div className="flex flex-wrap gap-1.5 max-w-[70%]">
                         {prompt.tags.slice(0, 3).map(tag => (
                             <span key={tag} className="text-[10px] bg-white/5 text-brand-text-secondary px-2 py-1 rounded-md">

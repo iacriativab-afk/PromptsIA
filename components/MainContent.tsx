@@ -3,7 +3,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import type { Agent } from '../types';
 import { runAgentGeneration } from '../services/geminiService';
 import Loader from './Loader';
-import { ClipboardIcon, TrashIcon, SparklesIcon, ArrowPathIcon, ArrowDownTrayIcon, ArrowLeftIcon, PlayIcon, CheckBadgeIcon } from './Icons';
+import { ClipboardIcon, TrashIcon, SparklesIcon, ArrowPathIcon, ArrowDownTrayIcon, ArrowLeftIcon, PlayIcon } from './Icons';
 
 declare global {
   interface Window {
@@ -38,21 +38,23 @@ const MainContent: React.FC<MainContentProps> = ({ agent, onBack }) => {
   useEffect(() => {
     setError(null);
     setAspectRatio('1:1'); // Reset aspect ratio when agent changes
-    // Auto-focus textarea on mount
     textareaRef.current?.focus();
   }, [agent]);
 
   // Trigger Mermaid Rendering when output changes
   useEffect(() => {
     if (outputData?.type === 'text' && window.mermaid) {
-        // Give React a moment to render the DOM before mermaid takes over
         setTimeout(() => {
              try {
-                window.mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+                // Ensure we only look for valid mermaid divs that haven't been processed
+                const nodes = document.querySelectorAll('.mermaid');
+                if (nodes.length > 0) {
+                    window.mermaid.init(undefined, nodes);
+                }
              } catch (e) {
-                 console.warn("Mermaid rendering error", e);
+                 console.warn("Mermaid rendering warning", e);
              }
-        }, 100);
+        }, 300);
     }
   }, [outputData]);
 
@@ -66,7 +68,6 @@ const MainContent: React.FC<MainContentProps> = ({ agent, onBack }) => {
     setLoadingMessage('Iniciando...');
 
     try {
-      // Pass aspect ratio if it's an image agent
       const result = await runAgentGeneration(agent, inputText, setLoadingMessage, { aspectRatio });
       if (result.type === 'error') {
           setError(result.data);
@@ -79,7 +80,9 @@ const MainContent: React.FC<MainContentProps> = ({ agent, onBack }) => {
       setIsLoading(false);
       setLoadingMessage('');
       if (window.innerWidth < 768 && outputRef.current) {
-        outputRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => {
+            outputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
       }
     }
   }, [agent, inputText, aspectRatio]);
@@ -99,9 +102,7 @@ const MainContent: React.FC<MainContentProps> = ({ agent, onBack }) => {
   };
 
   const formatTextOutput = (text: string) => {
-    // Simple splitter to separate Mermaid code blocks from regular Markdown text
-    // Logic: Look for ```mermaid ... ``` blocks and replace them with a div class="mermaid"
-    
+    // Advanced splitter to separate Mermaid code blocks and regular text
     const parts = text.split(/(```mermaid[\s\S]*?```)/g);
     
     return parts.map((part, index) => {
@@ -110,9 +111,42 @@ const MainContent: React.FC<MainContentProps> = ({ agent, onBack }) => {
             const code = part.replace('```mermaid', '').replace('```', '').trim();
             return <div key={index} className="mermaid">{code}</div>;
         }
-        // Standard text rendering (simplified Markdown)
+        
+        // Better Text Rendering: Process bolding and paragraphs
+        // This replaces the old <pre> tag usage for a more professional look
+        const paragraphs = part.split('\n\n').filter(p => p.trim());
+        
         return (
-            <pre key={index} className="whitespace-pre-wrap font-sans break-words">{part}</pre>
+            <div key={index} className="prose prose-invert max-w-none text-brand-text-primary">
+                {paragraphs.map((para, pIdx) => {
+                    // Simple bold parser for **text**
+                    const formattedPara = para.split(/(\*\*.*?\*\*)/g).map((chunk, cIdx) => {
+                        if (chunk.startsWith('**') && chunk.endsWith('**')) {
+                            return <strong key={cIdx} className="text-white font-bold">{chunk.slice(2, -2)}</strong>;
+                        }
+                        return chunk;
+                    });
+                    
+                    // Headers detection
+                    if (para.startsWith('###')) return <h3 key={pIdx} className="text-xl font-bold text-white mt-6 mb-2">{formattedPara}</h3>;
+                    if (para.startsWith('##')) return <h2 key={pIdx} className="text-2xl font-bold text-white mt-8 mb-3 border-b border-white/10 pb-2">{formattedPara}</h2>;
+                    if (para.startsWith('#')) return <h1 key={pIdx} className="text-3xl font-bold text-white mt-8 mb-4">{formattedPara}</h1>;
+
+                    // Bullet points detection
+                    if (para.trim().startsWith('- ')) {
+                        const lines = para.split('\n');
+                        return (
+                            <ul key={pIdx} className="list-disc list-outside pl-5 my-4 space-y-1 text-brand-text-secondary">
+                                {lines.map((line, lIdx) => (
+                                    <li key={lIdx}>{line.replace('- ', '')}</li>
+                                ))}
+                            </ul>
+                        );
+                    }
+
+                    return <p key={pIdx} className="mb-4 leading-relaxed text-brand-text-primary/90">{formattedPara}</p>;
+                })}
+            </div>
         );
     });
   };
@@ -133,9 +167,6 @@ const MainContent: React.FC<MainContentProps> = ({ agent, onBack }) => {
       return (
         <div className="flex flex-col items-center justify-center h-full">
             <div className="text-red-400 bg-red-500/10 border border-red-500/20 p-8 rounded-2xl max-w-lg text-center backdrop-blur-sm">
-            <div className="inline-block p-3 rounded-full bg-red-500/20 mb-4">
-                <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-            </div>
             <h3 className="text-lg font-bold mb-2">Falha na Geração</h3>
             <p className="text-sm opacity-90 leading-relaxed">{error}</p>
             </div>
@@ -148,7 +179,20 @@ const MainContent: React.FC<MainContentProps> = ({ agent, onBack }) => {
             try {
                 // Strip markdown code blocks if present
                 const cleanJson = outputData.data.replace(/```json/g, '').replace(/```/g, '').trim();
-                const clips: ViralClip[] = JSON.parse(cleanJson);
+                let clips: ViralClip[] = [];
+                try {
+                     clips = JSON.parse(cleanJson);
+                } catch(e) {
+                    // Sometimes models return text before the JSON, try to find the array
+                    const arrayMatch = cleanJson.match(/\[.*\]/s);
+                    if (arrayMatch) {
+                        clips = JSON.parse(arrayMatch[0]);
+                    } else {
+                        throw e;
+                    }
+                }
+
+                if (!Array.isArray(clips)) throw new Error("Formato inválido");
 
                 return (
                     <div className="grid grid-cols-1 gap-6">
@@ -156,7 +200,7 @@ const MainContent: React.FC<MainContentProps> = ({ agent, onBack }) => {
                             <div key={idx} className="bg-brand-surface border border-white/10 rounded-2xl overflow-hidden hover:border-brand-accent/50 transition-colors group">
                                 <div className="flex flex-col md:flex-row">
                                     {/* Mock Video Player Area */}
-                                    <div className="w-full md:w-48 bg-black relative flex items-center justify-center aspect-[9/16] md:aspect-auto">
+                                    <div className="w-full md:w-48 bg-black relative flex items-center justify-center aspect-[9/16] md:aspect-auto min-h-[200px]">
                                         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80"></div>
                                         <PlayIcon className="w-12 h-12 text-white opacity-80 group-hover:scale-110 transition-transform duration-300" />
                                         <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-[10px] font-mono text-white">
@@ -170,15 +214,14 @@ const MainContent: React.FC<MainContentProps> = ({ agent, onBack }) => {
                                             <div className={`px-3 py-1 rounded-full text-xs font-bold border ${clip.viralScore >= 90 ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'}`}>
                                                 Viral Score: {clip.viralScore}
                                             </div>
-                                            <button className="text-brand-text-secondary hover:text-white text-xs underline">Editar Legendas</button>
                                         </div>
 
                                         <h3 className="text-xl font-bold text-white mb-2 line-clamp-2">{clip.title}</h3>
                                         <p className="text-brand-text-secondary text-sm mb-4 flex-1">{clip.summary}</p>
                                         
                                         <div className="flex flex-wrap gap-2 mb-4">
-                                            {clip.hashtags?.map(tag => (
-                                                <span key={tag} className="text-[10px] text-brand-accent bg-brand-accent/10 px-2 py-1 rounded">
+                                            {clip.hashtags?.map((tag, tIdx) => (
+                                                <span key={tIdx} className="text-[10px] text-brand-accent bg-brand-accent/10 px-2 py-1 rounded">
                                                     #{tag}
                                                 </span>
                                             ))}
@@ -205,7 +248,7 @@ const MainContent: React.FC<MainContentProps> = ({ agent, onBack }) => {
         switch (outputData.type) {
             case 'text':
                 return (
-                    <div className="font-sans text-brand-text-primary text-lg leading-8 space-y-4">
+                    <div className="space-y-4">
                          {formatTextOutput(outputData.data)}
                     </div>
                 );
@@ -240,7 +283,7 @@ const MainContent: React.FC<MainContentProps> = ({ agent, onBack }) => {
         }
     }
     return (
-        <div className="flex flex-col items-center justify-center h-full text-center text-brand-text-secondary/40 p-8">
+        <div className="flex flex-col items-center justify-center h-full text-center text-brand-text-secondary/40 p-8 select-none">
             <agent.icon className="h-24 w-24 mb-6 stroke-[0.5] opacity-50"/>
             <p className="font-medium text-xl">O resultado aparecerá aqui</p>
             <p className="text-sm mt-2 font-mono opacity-70">Aguardando instruções :: {agent.model || 'Standard Model'}</p>
@@ -278,7 +321,7 @@ const MainContent: React.FC<MainContentProps> = ({ agent, onBack }) => {
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-0 md:divide-x divide-white/5 overflow-hidden">
             
             {/* Input Panel */}
-            <div className="flex flex-col bg-brand-primary/50 h-full overflow-hidden relative">
+            <div className="flex flex-col bg-brand-primary/50 h-full overflow-hidden relative order-2 md:order-1 border-t md:border-t-0 border-white/5">
                 <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                     <span className="text-xs font-bold uppercase tracking-widest text-brand-text-secondary font-mono">
                         {agent.type === 'image' ? 'Prompt Visual' : 'Entrada (Prompt)'}
@@ -323,14 +366,14 @@ const MainContent: React.FC<MainContentProps> = ({ agent, onBack }) => {
                 {/* Action Bar */}
                 <div className="p-6 border-t border-white/5 bg-brand-surface/30 backdrop-blur-sm">
                      <div className="flex justify-between items-center">
-                        <div className="text-xs text-brand-text-secondary opacity-50 font-mono">
+                        <div className="text-xs text-brand-text-secondary opacity-50 font-mono hidden sm:block">
                             {inputText.length} CHARS
                         </div>
                         <button
                             onClick={handleGenerate}
                             disabled={isLoading || !inputText.trim()}
                             className={`
-                                relative flex items-center gap-2 px-8 py-3 
+                                relative flex items-center gap-2 px-8 py-3 w-full sm:w-auto justify-center
                                 bg-brand-accent hover:bg-brand-accent-hover 
                                 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none
                                 rounded-xl font-bold text-white transition-all duration-300
@@ -352,7 +395,7 @@ const MainContent: React.FC<MainContentProps> = ({ agent, onBack }) => {
             </div>
 
             {/* Output Panel */}
-            <div ref={outputRef} className="flex flex-col bg-brand-secondary/30 h-full overflow-hidden relative">
+            <div ref={outputRef} className="flex flex-col bg-brand-secondary/30 h-full overflow-hidden relative order-1 md:order-2">
                 <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                     <span className="text-xs font-bold uppercase tracking-widest text-brand-text-secondary font-mono">Saída</span>
                     {(canCopy || canDownload) && (
@@ -379,7 +422,7 @@ const MainContent: React.FC<MainContentProps> = ({ agent, onBack }) => {
                         </div>
                     )}
                 </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-8 bg-black/20">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 bg-black/20">
                     {renderOutput()}
                 </div>
             </div>

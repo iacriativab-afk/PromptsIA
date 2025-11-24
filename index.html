@@ -50,46 +50,73 @@
             startOnLoad: false,
             theme: 'dark',
             securityLevel: 'loose',
-            fontFamily: 'Inter'
+            fontFamily: 'Inter',
+            themeVariables: {
+              darkMode: true,
+              background: '#181B29',
+              primaryColor: '#6366f1',
+              secondaryColor: '#0F111A',
+              tertiaryColor: '#181B29',
+              primaryTextColor: '#F3F4F6',
+              secondaryTextColor: '#9CA3AF',
+              lineColor: '#6366f1'
+            }
         });
     </script>
     <style>
-      /* Custom Scrollbar */
-      ::-webkit-scrollbar {
+      /* Global Styles */
+      body {
+        background-color: #05050A;
+        color: #F3F4F6;
+      }
+      
+      /* Custom Scrollbar - Global & Class Based */
+      ::-webkit-scrollbar, .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
         height: 6px;
       }
-      ::-webkit-scrollbar-track {
+      ::-webkit-scrollbar-track, .custom-scrollbar::-webkit-scrollbar-track {
         background: transparent;
       }
-      ::-webkit-scrollbar-thumb {
+      ::-webkit-scrollbar-thumb, .custom-scrollbar::-webkit-scrollbar-thumb {
         background: rgba(255, 255, 255, 0.1);
         border-radius: 3px;
       }
-      ::-webkit-scrollbar-thumb:hover {
+      ::-webkit-scrollbar-thumb:hover, .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background: rgba(255, 255, 255, 0.2);
       }
+
+      /* Utilities */
       .glass-panel {
         background: rgba(15, 17, 26, 0.6);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.08);
       }
+      
       .mermaid {
-        background: rgba(255, 255, 255, 0.02);
-        border-radius: 8px;
-        padding: 16px;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 24px;
         display: flex;
         justify-content: center;
         margin-top: 16px;
         margin-bottom: 16px;
+        overflow-x: auto;
       }
+      
       .no-scrollbar::-webkit-scrollbar {
           display: none;
       }
       .no-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
+      }
+
+      .mask-linear-fade {
+        mask-image: linear-gradient(to right, black 85%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
       }
     </style>
 <script type="importmap">

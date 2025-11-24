@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
 import Sidebar from '../components/Sidebar';
-import DashboardHome from '../components/Dashboard'; // Renamed import to avoid conflict
+import DashboardHome from '../components/Dashboard';
 import MainContent from '../components/MainContent';
 import PromptLibrary from '../components/PromptLibrary';
 import Courses from '../components/Courses';
@@ -75,9 +75,17 @@ const Dashboard = () => {
         {isSidebarOpen ? <XIcon className="h-6 w-6" /> : <MenuIcon className="h-6 w-6" />}
       </button>
 
+      {/* Sidebar Overlay (Mobile) */}
+      {isSidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          ></div>
+      )}
+
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-40 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        fixed inset-y-0 left-0 z-50 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         md:relative md:translate-x-0 transition-transform duration-300 ease-out
         flex-shrink-0 shadow-2xl md:shadow-none h-full
       `}>
@@ -91,7 +99,7 @@ const Dashboard = () => {
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col overflow-hidden relative z-10">
+      <main className="flex-1 flex flex-col overflow-hidden relative z-10 w-full">
         {currentView === 'dashboard' && (
           <DashboardHome onSelectAgent={handleSelectAgent} />
         )}
