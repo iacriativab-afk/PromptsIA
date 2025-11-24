@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI, Modality } from "@google/genai";
 import type { Agent } from '../types';
 
 // Helper to encode Uint8Array to Base64
@@ -71,8 +71,7 @@ export const runAgentGeneration = async (
     agent: Agent, 
     userInput: string,
     setLoadingMessage: (message: string) => void,
-    additionalParams: { aspectRatio?: string } = {},
-    onUsageIncrement?: (type: 'text' | 'image' | 'video' | 'audio' | 'thinking', amount: number) => Promise<void>
+    additionalParams: { aspectRatio?: string } = {}
 ): Promise<{ type: string; data: string }> => {
   
   // Handle Veo API Key Selection
@@ -87,7 +86,7 @@ export const runAgentGeneration = async (
   }
 
   // Initialize AI with process.env.API_KEY as mandated
-  const ai = new GoogleGenerativeAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
     // Determine model: Use specific agent model if defined, else default based on type
@@ -104,12 +103,8 @@ export const runAgentGeneration = async (
     if (agent.type === 'text') {
         setLoadingMessage(agent.thinkingBudget ? 'Pensando profundamente...' : 'Gerando resposta...');
         
-        const model = ai.getGenerativeModel({ 
-            model: modelName,
-            systemInstruction: agent.systemInstruction,
-        });
-
         const config: any = {
+            systemInstruction: agent.systemInstruction,
             temperature: agent.thinkingBudget ? undefined : 0.7,
         };
 
@@ -118,20 +113,12 @@ export const runAgentGeneration = async (
             config.thinkingConfig = { thinkingBudget: agent.thinkingBudget };
         }
 
-        const textResponse = await model.generateContent({
-          contents: [{ role: 'user', parts: [{ text: userInput }] }],
-          generationConfig: config
+        const textResponse = await ai.models.generateContent({
+          model: modelName,
+          contents: userInput,
+          config: config
         });
         
-        // Track usage
-        if (onUsageIncrement) {
-          const tokenCount = textResponse.usageMetadata?.totalTokenCount || 0;
-          await onUsageIncrement('text', 1);
-          if (agent.thinkingBudget && textResponse.usageMetadata?.cachedContentTokenCount) {
-            await onUsageIncrement('thinking', textResponse.usageMetadata.cachedContentTokenCount);
-          }
-        }
-
         return { type: 'text', data: textResponse.text || "Sem resposta do modelo." };
     }
 
@@ -140,50 +127,60 @@ export const runAgentGeneration = async (
         setLoadingMessage('Criando arte visual...');
         const ratio = additionalParams.aspectRatio || '1:1';
         
-        const model = ai.getGenerativeModel({ model: modelName });
-        
-        const imageResponse = await model.generateContent({
-            contents: [{ 
-                parts: [{ text: userInput }] 
-            }],
-            generationConfig: {
-                temperature: 0.8
+        if (modelName.includes('imagen')) {
+            // Imagen Model (e.g. imagen-4.0-generate-001)
+            const imageResponse = await ai.models.generateImages({
+                model: modelName,
+                prompt: userInput,
+                config: {
+                  numberOfImages: 1,
+                  outputMimeType: 'image/jpeg',
+                  aspectRatio: ratio,
+                },
+            });
+            const base64ImageBytes = imageResponse.generatedImages[0].image.imageBytes;
+            return { type: 'image', data: `data:image/jpeg;base64,${base64ImageBytes}` };
+        } else {
+            // Gemini Image Model (e.g. gemini-2.5-flash-image)
+            const imageResponse = await ai.models.generateContent({
+                model: modelName,
+                contents: {
+                    parts: [
+                        { text: userInput } // Text prompt only for simple generation
+                    ]
+                },
+                config: {
+                    imageConfig: {
+                        aspectRatio: ratio
+                    }
+                }
+            });
+            
+            for (const part of imageResponse.candidates[0].content.parts) {
+                if (part.inlineData) {
+                    const base64EncodeString: string = part.inlineData.data;
+                    return { type: 'image', data: `data:image/png;base64,${base64EncodeString}` };
+                }
             }
-        });
-        
-        // Track usage
-        if (onUsageIncrement) {
-          await onUsageIncrement('image', 1);
+            throw new Error("Nenhuma imagem encontrada na resposta.");
         }
-        
-        for (const part of imageResponse.candidates?.[0]?.content?.parts || []) {
-            if (part.inlineData) {
-                const base64EncodeString: string = part.inlineData.data;
-                return { type: 'image', data: `data:image/png;base64,${base64EncodeString}` };
-            }
-        }
-        throw new Error("Nenhuma imagem encontrada na resposta.");
     }
 
     // AUDIO GENERATION
     if (agent.type === 'audio') {
         setLoadingMessage('Sintetizando voz...');
-        const model = ai.getGenerativeModel({ model: modelName });
-        
-        const audioResponse = await model.generateContent({
-            contents: [{ 
-                parts: [{ text: userInput }] 
-            }],
-            generationConfig: {
-                temperature: 0.7
-            }
+        const audioResponse = await ai.models.generateContent({
+            model: modelName,
+            contents: [{ parts: [{ text: userInput }] }],
+            config: {
+                responseModalities: [Modality.AUDIO],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: 'Kore' }, // Could make this configurable later
+                    },
+                },
+            },
         });
-        
-        // Track usage
-        if (onUsageIncrement) {
-          await onUsageIncrement('audio', 1);
-        }
-
         const base64Audio = audioResponse.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (!base64Audio) throw new Error("A resposta de áudio estava vazia.");
         const wavUri = createWavDataUri(base64Audio);
@@ -196,14 +193,14 @@ export const runAgentGeneration = async (
         // Key selection is handled at the start of function
 
         setLoadingMessage('Renderizando vídeo com Veo (isso pode levar 1-2 minutos)...');
-        const model = ai.getGenerativeModel({ model: modelName });
         
-        let operation = await model.generateContent({
-            contents: [{ 
-                parts: [{ text: userInput }] 
-            }],
-            generationConfig: {
-                temperature: 0.7
+        let operation = await ai.models.generateVideos({
+            model: modelName,
+            prompt: userInput,
+            config: {
+                numberOfVideos: 1,
+                resolution: '720p',
+                aspectRatio: '16:9'
             }
         });
 
@@ -212,18 +209,21 @@ export const runAgentGeneration = async (
             pollCount++;
             setLoadingMessage(`Renderizando... (${pollCount}0s)`);
             await new Promise(resolve => setTimeout(resolve, 10000)); // Poll every 10s
+            operation = await ai.operations.getVideosOperation({ operation: operation });
         }
 
         setLoadingMessage('Finalizando download...');
-        const downloadLink = operation.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
         if (!downloadLink) throw new Error("URI de download do vídeo não encontrado.");
         
-        // Track usage
-        if (onUsageIncrement) {
-          await onUsageIncrement('video', 1);
-        }
+        // The response.body contains the MP4 bytes. Append API key.
+        // use process.env.API_KEY as explicitly required
+        const videoResponse = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+        if (!videoResponse.ok) throw new Error("Falha ao fazer download do vídeo.");
 
-        return { type: 'video', data: downloadLink };
+        const videoBlob = await videoResponse.blob();
+        const videoUrl = URL.createObjectURL(videoBlob);
+        return { type: 'video', data: videoUrl };
     }
 
     throw new Error(`Tipo de agente não suportado: ${agent.type}`);

@@ -2,8 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { SparklesIcon, CheckBadgeIcon, CreditCardIcon, ArrowPathIcon, XIcon, CodeBracketIcon } from './Icons';
-import { downgradeUserTier } from '../services/supabase';
-import { startStripeCheckout } from '../services/stripe';
+import { downgradeUserTier, upgradeUserTier } from '../services/supabase';
 
 interface UserProfileProps {
   user: User;
@@ -49,19 +48,21 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
   };
 
   const handleStripeCheckout = async () => {
+    // MOCK CHECKOUT - Apenas simula o processo visualmente
     setIsValidating(true);
     
-    try {
-      // Usar a nova integração Stripe
-      await startStripeCheckout(user, 'pro_monthly');
-      
-      // Nota: Após retornar do Stripe, o webhook atualizará o banco de dados
-      // O componente será re-renderizado quando o usuário voltar
-    } catch (error: any) {
-      console.error('Erro ao iniciar checkout:', error);
-      alert(`Erro: ${error.message || 'Falha ao processar pagamento'}`);
-      setIsValidating(false);
-    }
+    setTimeout(async () => {
+        setIsValidating(false);
+        setShowPaymentSuccess(true);
+        
+        // Simula a chamada de API de upgrade
+        await upgradeUserTier(user.id);
+        
+        setTimeout(() => {
+            onUpgrade(); // Atualiza o estado no componente pai/contexto
+            setShowPaymentSuccess(false);
+        }, 1500);
+    }, 2000);
   };
 
   const handleCancelSubmit = async () => {
@@ -70,7 +71,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
         return;
     }
 
-    if (confirm("Tem certeza que deseja cancelar sua assinatura Pro? Você perderá acesso imediato aos recursos exclusivos.")) {
+    if (confirm("Simulação: Tem certeza que deseja cancelar sua assinatura Pro?")) {
         setIsCancelling(true);
         try {
             const feedback = selectedReason === "Outro motivo" ? otherReason : selectedReason;
@@ -80,10 +81,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
             setSelectedReason('');
             setOtherReason('');
             
-            alert("Assinatura cancelada com sucesso. Esperamos te ver de volta em breve!");
+            alert("Assinatura cancelada (Simulação).");
+            window.location.reload(); // Recarrega para refletir mudança para Free
         } catch (error) {
             console.error(error);
-            alert("Houve um erro ao cancelar. Tente novamente.");
         } finally {
             setIsCancelling(false);
         }
@@ -149,17 +150,17 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
                             {isValidating ? (
                                 <>
                                     <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                                    Confirmando Pagamento...
+                                    Processando (Demo)...
                                 </>
                             ) : showPaymentSuccess ? (
                                 <>
                                     <CheckBadgeIcon className="h-5 w-5" />
-                                    Pagamento Aprovado!
+                                    Sucesso!
                                 </>
                             ) : (
                                 <>
                                     <CreditCardIcon className="h-5 w-5" />
-                                    Assinar com Stripe (R$ 29,90)
+                                    Assinar Agora (Demo)
                                 </>
                             )}
                         </button>
@@ -208,7 +209,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
                         Chave Mestra da API (Google Gemini)
                     </h3>
                     <p className="text-sm text-brand-text-secondary mb-4">
-                        Como dono do SaaS, insira sua chave da Google aqui. Todos os usuários da plataforma usarão esta chave para gerar conteúdo (simulando o backend).
+                        Como não temos backend real neste modo "Demo", insira sua chave da Google aqui. A aplicação consumirá esta chave diretamente no frontend.
                         <br />
                         <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-brand-accent hover:underline">Obter chave no Google AI Studio &rarr;</a>
                     </p>
@@ -224,7 +225,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpgrade, onLogout }) 
                             onClick={handleSaveKey}
                             className="bg-brand-accent hover:bg-brand-accent-hover text-white px-6 py-2 rounded-lg font-bold transition-colors text-sm"
                         >
-                            Salvar e Ativar
+                            Salvar Localmente
                         </button>
                     </div>
                 </div>

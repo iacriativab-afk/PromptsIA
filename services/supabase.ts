@@ -1,160 +1,85 @@
-import { createClient, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
+
 import type { User } from '../types';
 
-// --- CONFIGURAÇÃO DO SUPABASE ---
+// --- MOCK SERVICE (NO BACKEND) ---
+// Este arquivo substitui a conexão real com o Supabase para garantir
+// que o deploy funcione sem erros de banco de dados.
 
-// FALLBACKS DE SEGURANÇA (Para ambiente de desenvolvimento local sem .env)
-const FALLBACK_URL = "https://jczdzujewyylnordhrpp.supabase.co"; 
-const FALLBACK_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjemR6dWpld3l5bG5vcmRocnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3MTMzMTAsImV4cCI6MjA3OTI4OTMxMH0.c2hlgDZgbWGvXqbgyNKeEScLdp34y4l7YirxrzD55-c";
+export const supabase = null; // Removemos a instância real
 
-let supabaseUrl = FALLBACK_URL;
-let supabaseAnonKey = FALLBACK_ANON_KEY;
+// Mock User Data
+const MOCK_USER: User = {
+    id: 'mock-user-id',
+    name: 'Usuário Demo',
+    email: 'demo@prompts.ia',
+    avatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Felix',
+    tier: 'free', // Começa como free para testar o fluxo, ou mude para 'pro'
+    joinDate: new Date().toISOString()
+};
 
-// Tentativa segura de ler variáveis de ambiente (Vite)
-if (import.meta.env) {
-    if (import.meta.env.VITE_SUPABASE_URL) {
-        supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    }
-    if (import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    }
-}
-
-// EXPORTING SUPABASE INSTANCE FOR CONTEXT
-export let supabase: SupabaseClient | null = null;
-let isSupabaseInitialized = false;
-
-// Safe initialization
-try {
-    if (supabaseUrl && supabaseAnonKey) {
-        supabase = createClient(supabaseUrl, supabaseAnonKey);
-        isSupabaseInitialized = true;
-        console.log("⚡ Supabase conectado.");
-    } else {
-        console.error("⚠️ Chaves do Supabase não encontradas.");
-    }
-} catch (e) {
-    console.error("⚠️ Falha crítica ao inicializar cliente Supabase:", e);
-}
-
-// --- CONTROLE DE MODO (REAL vs DEMO) ---
 const STORAGE_KEY_USER = 'promptsia_user';
 const STORAGE_KEY_TIER = 'promptsia_user_tier';
 
-// Helper para mapear usuário do Supabase para nosso tipo User
-const mapSupabaseUser = (sbUser: SupabaseUser, profileData: any): User => {
-    return {
-        id: sbUser.id,
-        name: profileData?.name || sbUser.user_metadata?.full_name || 'Usuário',
-        email: sbUser.email || '',
-        avatar: profileData?.avatar_url || sbUser.user_metadata?.avatar_url,
-        tier: profileData?.tier || 'free',
-        joinDate: sbUser.created_at
-    };
-};
+// --- AUTHENTICATION MOCKS ---
 
-export const fetchProfile = async (sbUser: SupabaseUser): Promise<User> => {
-    if (!supabase) return mapSupabaseUser(sbUser, {});
-
-    try {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', sbUser.id)
-            .single();
-
-        if (error || !data) {
-            // Se falhar ao buscar perfil (ex: tabela não existe), retorna dados básicos do Auth
-            return mapSupabaseUser(sbUser, {});
-        }
-        return mapSupabaseUser(sbUser, data);
-    } catch (e) {
-        console.error("Erro ao buscar perfil:", e);
-        return mapSupabaseUser(sbUser, {});
-    }
-};
-
-// --- AUTENTICAÇÃO: MODO VISITANTE ---
 export const loginAsGuest = async (): Promise<void> => {
-    const mockUser: User = {
-        id: `guest-${Date.now()}`,
-        name: 'Visitante PromptsIA',
-        email: 'visitante@promptsia.demo',
-        avatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=PromptsIAGuest',
-        tier: 'free',
-        joinDate: new Date().toISOString()
-    };
-    
-    try {
-        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(mockUser));
-        localStorage.setItem(STORAGE_KEY_TIER, 'free');
-        window.location.reload();
-    } catch (e) {
-        console.error("Erro ao salvar usuário visitante:", e);
-    }
+    const guestUser = { ...MOCK_USER, id: `guest-${Date.now()}`, name: 'Visitante' };
+    localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(guestUser));
+    localStorage.setItem(STORAGE_KEY_TIER, 'free');
+    window.location.reload();
 };
 
-// --- AUTENTICAÇÃO: GOOGLE ---
 export const signInWithGoogle = async (): Promise<void> => {
-    if (!isSupabaseInitialized || !supabase) {
-        if(confirm("Não foi possível conectar ao servidor de login. Deseja entrar como visitante?")) {
-            return loginAsGuest();
-        }
-        return;
-    }
-
-    try {
-        // Redireciona para a URL atual (funciona local e na Vercel)
-        const redirectUrl = window.location.origin;
-
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: redirectUrl
-            }
-        });
-        
-        if (error) throw error;
-    } catch (error: any) {
-        console.error("Erro no login Google:", error);
-        alert(`Falha no login com Google: ${error.message || 'Erro desconhecido'}.`);
-        throw error;
-    }
+    // Simula um login bem-sucedido
+    const proUser = { ...MOCK_USER, tier: 'free' }; // Começa free, usuário faz upgrade na UI
+    localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(proUser));
+    // Não recarregamos a página forçadamente aqui para permitir transições suaves, 
+    // mas num app real haveria redirect.
+    window.location.reload();
 };
 
 export const logoutUser = async (): Promise<void> => {
     localStorage.removeItem(STORAGE_KEY_USER);
     localStorage.removeItem(STORAGE_KEY_TIER);
-    localStorage.removeItem('PROMPTSIA_API_KEY'); 
-
-    if (isSupabaseInitialized && supabase) {
-        await supabase.auth.signOut();
-    }
+    localStorage.removeItem('PROMPTSIA_API_KEY');
     window.location.reload();
 };
 
-// --- GERENCIAMENTO DE ASSINATURA ---
-export const upgradeUserTier = async (uid: string) => {
-    localStorage.setItem(STORAGE_KEY_TIER, 'pro');
-    
-    // Tenta persistir se o usuário estiver logado no Supabase
-    if (isSupabaseInitialized && supabase && !uid.startsWith('guest-')) {
-        try {
-            await supabase.from('profiles').update({ tier: 'pro', updated_at: new Date() }).eq('id', uid);
-        } catch (e) { console.warn("Erro ao persistir upgrade:", e); }
+export const fetchProfile = async (sbUser: any): Promise<User> => {
+    // Retorna o usuário do localStorage ou o Mock
+    const stored = localStorage.getItem(STORAGE_KEY_USER);
+    if (stored) {
+        const u = JSON.parse(stored);
+        // Garante que o tier esteja sincronizado
+        u.tier = localStorage.getItem(STORAGE_KEY_TIER) as 'free' | 'pro' || u.tier;
+        return u;
     }
+    return MOCK_USER;
+};
+
+// --- SUBSCRIPTION MOCKS ---
+
+export const upgradeUserTier = async (uid: string) => {
+    console.log("Mock Upgrade Triggered");
+    localStorage.setItem(STORAGE_KEY_TIER, 'pro');
+    // Atualiza o objeto do usuário no storage também se necessário
+    const stored = localStorage.getItem(STORAGE_KEY_USER);
+    if (stored) {
+        const u = JSON.parse(stored);
+        u.tier = 'pro';
+        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(u));
+    }
+    return true;
 };
 
 export const downgradeUserTier = async (uid: string, feedback: string) => {
+    console.log("Mock Downgrade Triggered", feedback);
     localStorage.setItem(STORAGE_KEY_TIER, 'free');
-    
-    if (isSupabaseInitialized && supabase && !uid.startsWith('guest-')) {
-        try {
-            await supabase.from('profiles').update({ 
-                tier: 'free', 
-                updated_at: new Date(),
-                last_cancellation_reason: feedback 
-            }).eq('id', uid);
-        } catch (e) { console.warn("Erro ao persistir downgrade:", e); }
+    const stored = localStorage.getItem(STORAGE_KEY_USER);
+    if (stored) {
+        const u = JSON.parse(stored);
+        u.tier = 'free';
+        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(u));
     }
+    return true;
 };

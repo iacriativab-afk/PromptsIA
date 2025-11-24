@@ -42,7 +42,7 @@ export const AGENTS: Agent[] = [
     systemInstruction: 'Você é um estrategista viral de vídeos curtos (TikTok, Reels, Shorts). Sua especialidade é RETENÇÃO. Para cada solicitação: 1. Crie 3 opções de HOOK (Gancho) visual e sonoro para os primeiros 3 segundos. 2. Desenvolva o roteiro focado em "looping" (assistir novamente). 3. Sugira hashtags de nicho e áudios em alta. Use gírias nativas da plataforma e psicologia comportamental.',
     type: 'text',
     category: 'Business',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-2.5-flash-lite-latest',
     coverGradient: 'from-pink-500 to-rose-600',
     backgroundImage: 'https://images.unsplash.com/photo-1611605698335-8b1569810432?q=80&w=800&auto=format&fit=crop',
     requiresPro: false
@@ -71,7 +71,7 @@ export const AGENTS: Agent[] = [
     systemInstruction: 'Você é um guia paciente e claro para iniciantes no Marketing Digital. Explique termos complexos (Lançamento, Evergreen, PLR, VSL, Copy) com metáforas simples. Seu objetivo é desmistificar o mercado e dar um plano de ação seguro para o primeiro real ganho na internet. Evite promessas de dinheiro fácil; foque em construção de ativos.',
     type: 'text',
     category: 'Business',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-2.5-flash-lite-latest',
     coverGradient: 'from-amber-500 to-orange-600',
     backgroundImage: 'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?q=80&w=800&auto=format&fit=crop',
     requiresPro: false
@@ -85,7 +85,7 @@ export const AGENTS: Agent[] = [
     systemInstruction: 'Você é um especialista em monetização de Prompts. O usuário vai te dar um prompt bruto. Você deve: 1. Otimizar o prompt para torná-lo robusto e flexível (usando [colchetes] para variáveis). 2. Criar um título atraente e uma descrição de venda (Copywriting) para marketplaces como PromptBase. 3. Sugerir 3 exemplos de uso/saída para mostrar no portfólio.',
     type: 'text',
     category: 'Business',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-2.5-flash-lite-latest',
     coverGradient: 'from-green-500 to-emerald-700',
     backgroundImage: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?q=80&w=800&auto=format&fit=crop',
     requiresPro: false
@@ -143,6 +143,7 @@ export const AGENTS: Agent[] = [
     type: 'text',
     category: 'Dev',
     model: 'gemini-3-pro-preview',
+    thinkingBudget: 16384,
     coverGradient: 'from-emerald-600 to-teal-900',
     backgroundImage: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=800&auto=format&fit=crop',
     requiresPro: false
@@ -156,7 +157,7 @@ export const AGENTS: Agent[] = [
     systemInstruction: 'Você é um especialista em pesquisa acadêmica. Sua tarefa é ler o texto fornecido e criar um resumo conciso, claro e bem estruturado. O resumo deve capturar os pontos principais, a metodologia, os resultados e as conclusões do texto. Formate a saída em Markdown, usando títulos para seções como "Introdução", "Metodologia", "Resultados Principais" e "Conclusão".',
     type: 'text',
     category: 'Writing',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-2.5-flash-lite-latest',
     coverGradient: 'from-blue-600 to-cyan-900',
     backgroundImage: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=800&auto=format&fit=crop',
     requiresPro: false
@@ -184,7 +185,7 @@ export const AGENTS: Agent[] = [
     systemInstruction: 'Você é um copywriter sênior especializado no framework AIDA. Crie um roteiro de marketing (para vídeo ou texto) com base no produto/serviço do usuário. Estruture a resposta claramente nas quatro seções: Atenção, Interesse, Desejo e Ação. Seja criativo, persuasivo e focado na conversão. Use formatação Markdown.',
     type: 'text',
     category: 'Writing',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-2.5-flash-lite-latest',
     coverGradient: 'from-orange-600 to-red-900',
     backgroundImage: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=800&auto=format&fit=crop',
     requiresPro: false
@@ -198,7 +199,7 @@ export const AGENTS: Agent[] = [
     systemInstruction: 'Você é um organizador de informações profissional. Sua tarefa é pegar o texto bruto fornecido e estruturá-lo de forma lógica e clara. Identifique os temas principais, crie seções com títulos, use listas de marcadores (bullet points) ou numeradas para detalhar informações e agrupe ideias relacionadas. O resultado final deve ser um documento bem organizado e fácil de ler, formatado em Markdown.',
     type: 'text',
     category: 'Productivity',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-2.5-flash-lite-latest',
     coverGradient: 'from-slate-600 to-gray-900',
     backgroundImage: 'https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?q=80&w=800&auto=format&fit=crop',
     requiresPro: false
@@ -212,7 +213,7 @@ export const AGENTS: Agent[] = [
     systemInstruction: 'Você é um editor de texto especialista. Reescreva o texto fornecido pelo usuário com base em seu objetivo (ex: "torná-lo mais formal", "simplificar para um leigo", "tornar mais persuasivo"). Mantenha a mensagem central, mas aprimore a linguagem, a fluidez e a estrutura. Entregue apenas o texto reescrito.',
     type: 'text',
     category: 'Writing',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-2.5-flash-lite-latest',
     coverGradient: 'from-green-600 to-emerald-900',
     backgroundImage: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=800&auto=format&fit=crop',
     requiresPro: false

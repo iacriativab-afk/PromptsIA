@@ -185,13 +185,7 @@ const LandingPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="py-10 border-t border-white/5 text-center text-brand-text-secondary text-sm">
-        <p>
-          &copy; 2024 Prompts.IA.
-          <a href="/termos" className="text-brand-accent hover:text-brand-accent-hover transition-colors mx-2">
-            Termos de Uso
-          </a>
-          | Todos os direitos reservados.
-        </p>
+        <p>&copy; 2024 Prompts.IA. Todos os direitos reservados.</p>
       </footer>
     </div>
   );

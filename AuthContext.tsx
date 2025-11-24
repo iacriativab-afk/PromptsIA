@@ -1,11 +1,9 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { supabase, fetchProfile, signInWithGoogle, logoutUser, loginAsGuest } from './services/supabase';
-import { Session } from '@supabase/supabase-js';
+import { signInWithGoogle, logoutUser, loginAsGuest } from './services/supabase';
 import { User } from './types';
 
 interface AuthContextType {
-  session: Session | null;
   user: User | null;
   loading: boolean;
   handleLogin: () => Promise<void>;
@@ -17,76 +15,36 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
-
-    // Check for Guest Mode in LocalStorage safely
-    const savedMockUser = localStorage.getItem('promptsia_user');
-    if (savedMockUser) {
+    // Simula verificação de sessão ao carregar
+    const checkSession = () => {
         try {
-            const parsed = JSON.parse(savedMockUser);
-            // Ensure parsed object is valid before using
-            if (parsed && typeof parsed === 'object') {
-                const currentTier = localStorage.getItem('promptsia_user_tier') as 'free' | 'pro' || parsed.tier;
-                if (mounted) {
-                    setUser({ ...parsed, tier: currentTier });
-                    setIsGuest(true);
-                    setLoading(false);
+            const savedUser = localStorage.getItem('promptsia_user');
+            const savedTier = localStorage.getItem('promptsia_user_tier') as 'free' | 'pro';
+
+            if (savedUser) {
+                const parsedUser = JSON.parse(savedUser);
+                // Força o tier salvo no localStorage (fonte da verdade para o mock)
+                if (savedTier) {
+                    parsedUser.tier = savedTier;
                 }
-                return;
-            } else {
-                throw new Error("Invalid user object");
+                
+                setUser(parsedUser);
+                setIsGuest(parsedUser.id.startsWith('guest'));
             }
-        } catch (e) {
-            console.error("Erro ao ler usuário do localStorage (dados corrompidos)", e);
-            localStorage.removeItem('promptsia_user'); // Clean bad data
+        } catch (error) {
+            console.error("Erro ao carregar sessão mockada:", error);
+            localStorage.clear();
+        } finally {
+            setLoading(false);
         }
-    }
+    };
 
-    // If no guest, check Supabase
-    if (supabase) {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (mounted) {
-                setSession(session);
-                if (session?.user) {
-                     fetchProfile(session.user).then(u => {
-                         if(mounted) setUser(u);
-                         setLoading(false);
-                     });
-                } else {
-                    setLoading(false);
-                }
-            }
-        });
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            if (mounted) {
-                setSession(session);
-                if (session?.user) {
-                    fetchProfile(session.user).then(u => {
-                         if(mounted) setUser(u);
-                    });
-                } else {
-                    // If not guest and logged out
-                    if (!localStorage.getItem('promptsia_user')) {
-                        setUser(null);
-                    }
-                }
-            }
-        });
-
-        return () => {
-            mounted = false;
-            subscription.unsubscribe();
-        };
-    } else {
-        setLoading(false);
-    }
+    checkSession();
   }, []);
 
   const handleLogin = async () => {
@@ -95,7 +53,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const handleLogout = async () => {
     await logoutUser();
-    setSession(null);
     setUser(null);
     setIsGuest(false);
   };
@@ -105,7 +62,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const value = {
-    session,
     user,
     loading,
     isGuest,
